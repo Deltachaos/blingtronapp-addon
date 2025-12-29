@@ -19,6 +19,20 @@ jobs:
         id: tag
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          # Remove 'v' prefix if present
+          VERSION=${TAG_NAME#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Update version in .toc file
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Update the Version line in BlingtronApp.toc
+          sed -i "s/^## Version:.*/## Version: $VERSION/" BlingtronApp.toc
+      
       - name: Create zip file
         run: |
           mkdir -p BlingtronApp
