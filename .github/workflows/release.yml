@@ -32,32 +32,10 @@ jobs:
           VERSION="${{ steps.version.outputs.VERSION }}"
           # Update the Version line in BlingtronApp.toc
           sed -i "s/^## Version:.*/## Version: $VERSION/" BlingtronApp.toc
-      
-      - name: Create zip file
-        run: |
-          mkdir -p BlingtronApp
-          for file in *; do
-            if [ -f "$file" ]; then
-              cp "$file" BlingtronApp/
-            fi
-          done
-          zip -r BlingtronApp.zip BlingtronApp/
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: BlingtronApp.zip
-          name: Release ${{ steps.tag.outputs.TAG_NAME }}
-          body: |
-            Release ${{ steps.tag.outputs.TAG_NAME }}
-            
-            ## Installation
-            1. Download `BlingtronApp.zip`
-            2. Extract the zip file
-            3. Copy the `BlingtronApp` folder to your `World of Warcraft\_retail_\Interface\AddOns\` directory
-            4. Restart World of Warcraft or reload your UI
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create Package
+        uses: BigWigsMods/packager@master
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
