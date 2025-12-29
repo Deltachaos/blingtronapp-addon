@@ -1,0 +1,52 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Extract tag name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Create zip file
+        run: |
+          # Create BlingtronApp directory
+          mkdir -p BlingtronApp
+          # Copy all files from root (excluding .git and .github)
+          for file in *; do
+            if [ -f "$file" ]; then
+              cp "$file" BlingtronApp/
+            fi
+          done
+          # Create zip file with BlingtronApp folder
+          zip -r BlingtronApp.zip BlingtronApp/
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: BlingtronApp.zip
+          name: Release ${{ steps.tag.outputs.TAG_NAME }}
+          body: |
+            Release ${{ steps.tag.outputs.TAG_NAME }}
+            
+            ## Installation
+            1. Download `BlingtronApp.zip`
+            2. Extract the zip file
+            3. Copy the `BlingtronApp` folder to your `World of Warcraft\_retail_\Interface\AddOns\` directory
+            4. Restart World of Warcraft or reload your UI
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
