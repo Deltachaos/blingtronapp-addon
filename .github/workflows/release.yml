@@ -21,15 +21,12 @@ jobs:
       
       - name: Create zip file
         run: |
-          # Create BlingtronApp directory
           mkdir -p BlingtronApp
-          # Copy all files from root (excluding .git and .github)
           for file in *; do
             if [ -f "$file" ]; then
               cp "$file" BlingtronApp/
             fi
           done
-          # Create zip file with BlingtronApp folder
           zip -r BlingtronApp.zip BlingtronApp/
       
       - name: Create Release
