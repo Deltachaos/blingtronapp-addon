@@ -1,0 +1,9 @@
+## Interface: 100105
+## Title: Blingtron.app
+## Notes: Set guild officer notes from CSV data
+## Author: YourName
+## Version: 1.0.0
+## SavedVariables: BlingtronAppDB
+
+BlingtronApp.lua
+
