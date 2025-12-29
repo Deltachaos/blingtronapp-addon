@@ -6,6 +6,7 @@
 ## SavedVariables: BlingtronAppDB
 ## X-Website: https://blingtron.app
 ## X-Curse-Project-ID: 1415956
+## X-WoWI-ID___: 0
 ## X-Wago-ID: x61zLvK1
 
 BlingtronApp.lua
