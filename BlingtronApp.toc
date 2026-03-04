@@ -2,12 +2,13 @@
 ## Title: Blingtron.app
 ## Notes: Set guild officer notes from CSV data
 ## Author: Deltachaos
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: BlingtronAppDB
 ## X-Website: https://blingtron.app
 ## X-Curse-Project-ID: 1415956
 ## X-Wago-ID: x61zLvK1
 ## X-WoWI-ID: 27004
 
+utf8.lua
 BlingtronApp.lua
 
