@@ -121,7 +121,7 @@ local function CreateMainMenuFrame()
     promoText2:SetPoint("TOPLEFT", promoText1, "BOTTOMLEFT", 0, -6)
     promoText2:SetWidth(320)
     promoText2:SetJustifyH("LEFT")
-    promoText2:SetText("· Discord reminders (great Vault, crest caps, tier progress)\n· Droptimizer wishlist syncing via browser extension\n· Raid lockout checks\n· Warcraft Logs attendance and performance tools.")
+    promoText2:SetText("· Discord reminders (great vault, crest caps, tier progress)\n· Droptimizer wishlist syncing via browser extension\n· Raid lockout checks\n· Warcraft Logs attendance and performance tools.")
 
     local promoText3 = mainMenuFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     promoText3:SetPoint("TOPLEFT", promoText2, "BOTTOMLEFT", 0, -6)
