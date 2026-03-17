@@ -1,6 +1,6 @@
 ## Interface: 120001, 120000, 110200, 110205, 110207
 ## Title: Blingtron.app
-## Notes: Set guild officer notes from CSV data
+## Notes: Set guild officer notes from CSV data and show BiS items in RCLootCouncil
 ## Author: Deltachaos
 ## Version: 1.0.1
 ## SavedVariables: BlingtronAppDB
@@ -8,7 +8,16 @@
 ## X-Curse-Project-ID: 1415956
 ## X-Wago-ID: x61zLvK1
 ## X-WoWI-ID: 27004
+## OptionalDeps: RCLootCouncil
+## IconTexture: Interface\AddOns\BlingtronApp\Media\logo
 
-utf8.lua
+Lib\utf8.lua
+Constants.lua
+Data\BisList\wowhead_overall.lua
 BlingtronApp.lua
+Helpers.lua
+GuildNoteSync.lua
+Menu.lua
+RCLootCouncil.lua
+RCLootCouncilColumns.lua
 
