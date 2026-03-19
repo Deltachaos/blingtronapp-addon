@@ -7,6 +7,10 @@ BlingtronApp.BisListSources.wowhead_overall = { label = "Wowhead (overall)", id 
 BlingtronApp.BisList.wowhead_overall = {
     -- Death Knight
     [BlingtronApp.DEATH_KNIGHT_BLOOD]  = {
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_LEGS]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_CHEST]] = "BiS",
         [49802] = "BiS",
         [49808] = "BiS",
         [151332] = "BiS",
@@ -41,6 +45,10 @@ BlingtronApp.BisList.wowhead_overall = {
         [260312] = "BiS",
     },
     [BlingtronApp.DEATH_KNIGHT_FROST]  = {
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_LEGS]] = "BiS",
         [50234] = "BiS",
         [193701] = "A",
         [193708] = "BiS",
@@ -66,6 +74,10 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "S",
     },
     [BlingtronApp.DEATH_KNIGHT_UNHOLY] = {
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DEATH_KNIGHT[BlingtronApp.SET_LEGS]] = "BiS",
         [50234] = "BiS",
         [151307] = "C",
         [193701] = "A",
@@ -103,6 +115,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Demon Hunter
     [BlingtronApp.DEMON_HUNTER_HAVOC]     = {
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "B",
         [193701] = "BiS",
         [239656] = "BiS",
@@ -140,6 +157,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260408] = "BiS",
     },
     [BlingtronApp.DEMON_HUNTER_VENGEANCE] = {
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [49806] = "BiS",
         [50264] = "BiS",
         [151307] = "D",
@@ -187,6 +209,13 @@ BlingtronApp.BisList.wowhead_overall = {
         [264694] = "B",
     },
     [BlingtronApp.DEMON_HUNTER_DEVOURER]  = {
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DEAMON_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+
+        [152524] = "BiS",
+        [154172] = "BiS",
         [49817] = "BiS",
         [50259] = "C",
         [151310] = "C",
@@ -226,6 +255,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Druid
     [BlingtronApp.DRUID_BALANCE]     = {
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151310] = "D",
         [193708] = "BiS",
         [244576] = "BiS",
@@ -253,6 +287,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [251217] = "BiS",
     },
     [BlingtronApp.DRUID_FERAL]       = {
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [193701] = "BiS",
         [244575] = "BiS",
@@ -281,6 +320,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.DRUID_GUARDIAN]    = {
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [151312] = "C",
         [193701] = "BiS",
@@ -319,6 +363,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.DRUID_RESTORATION] = {
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_DRUID[BlingtronApp.SET_LEGS]] = "BiS",
+
         [193714] = "BiS",
         [193718] = "A",
         [241340] = "D",
@@ -357,6 +406,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Evoker
     [BlingtronApp.EVOKER_DEVASTATION]  = {
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [49810] = "BiS",
         [50259] = "D",
         [151310] = "D",
@@ -395,6 +449,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264878] = "C",
     },
     [BlingtronApp.EVOKER_PRESERVATION] = {
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [193718] = "A",
         [193722] = "BiS",
         [241340] = "D",
@@ -428,6 +487,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264701] = "D",
     },
     [BlingtronApp.EVOKER_AUGMENTATION] = {
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_EVOKER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [49810] = "BiS",
         [49812] = "BiS",
         [50259] = "C",
@@ -459,6 +523,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Hunter
     [BlingtronApp.HUNTER_BEAST_MASTERY] = {
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "B",
         [151323] = "BiS",
         [193701] = "BiS",
@@ -492,6 +561,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.HUNTER_MARKSMANSHIP]  = {
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [151323] = "BiS",
         [193701] = "BiS",
@@ -521,6 +595,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "BiS",
     },
     [BlingtronApp.HUNTER_SURVIVAL]      = {
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_HUNTER[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "D",
         [151323] = "BiS",
         [193701] = "S",
@@ -556,6 +635,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Mage
     [BlingtronApp.MAGE_ARCANE] = {
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HANDS]] = "BiS",
+
         [50259] = "B",
         [151310] = "C",
         [239660] = "BiS",
@@ -599,6 +683,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264878] = "C",
     },
     [BlingtronApp.MAGE_FIRE]   = {
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_LEGS]] = "BiS",
+
         [50259] = "D",
         [151310] = "D",
         [239648] = "BiS",
@@ -637,6 +726,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264878] = "C",
     },
     [BlingtronApp.MAGE_FROST]  = {
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_MAGE[BlingtronApp.SET_LEGS]] = "BiS",
+
         [50259] = "D",
         [193708] = "BiS",
         [241340] = "B",
@@ -676,6 +770,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Monk
     [BlingtronApp.MONK_BREWMASTER]  = {
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_HANDS]] = "BiS",
+
         [151307] = "A",
         [151312] = "BiS",
         [151314] = "BiS",
@@ -729,6 +828,15 @@ BlingtronApp.BisList.wowhead_overall = {
         [264694] = "C",
     },
     [BlingtronApp.MONK_MISTWEAVER]  = {
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_LEGS]] = "BiS",
+
+        [154172] = "A",
+        [152524] = "BiS",
+        [195476] = "BiS",
+        [151958] = "B",
         [49806] = "BiS",
         [50264] = "BiS",
         [151311] = "BiS",
@@ -764,6 +872,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264701] = "D",
     },
     [BlingtronApp.MONK_WINDWALKER]  = {
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_MONK[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "B",
         [193701] = "BiS",
         [237845] = "BiS",
@@ -804,6 +917,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Paladin
     [BlingtronApp.PALADIN_HOLY]        = {
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_HANDS]] = "BiS",
+
         [50259] = "C",
         [151340] = "D",
         [193710] = "BiS",
@@ -838,6 +956,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264507] = "B",
     },
     [BlingtronApp.PALADIN_PROTECTION]  = {
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [151311] = "BiS",
         [151312] = "C",
@@ -877,6 +1000,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.PALADIN_RETRIBUTION] = {
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_PALADIN[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "D",
         [151332] = "BiS",
         [193701] = "BiS",
@@ -916,6 +1044,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Priest
     [BlingtronApp.PRIEST_DISCIPLINE] = {
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_LEGS]] = "BiS",
+
         [193718] = "B",
         [239664] = "BiS",
         [241340] = "C",
@@ -949,6 +1082,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [264701] = "D",
     },
     [BlingtronApp.PRIEST_HOLY]      = {
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_LEGS]] = "BiS",
+
         [193718] = "A",
         [239664] = "BiS",
         [241340] = "B",
@@ -982,6 +1120,12 @@ BlingtronApp.BisList.wowhead_overall = {
         [264701] = "D",
     },
     [BlingtronApp.PRIEST_SHADOW]    = {
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_PRIEST[BlingtronApp.SET_LEGS]] = "BiS",
+
         [50259] = "C",
         [151310] = "C",
         [245750] = "B",
@@ -1016,6 +1160,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Rogue
     [BlingtronApp.ROGUE_ASSASSINATION] = {
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_HANDS]] = "BiS",
+
         [151307] = "D",
         [193701] = "BiS",
         [237837] = "BiS",
@@ -1053,6 +1202,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260312] = "BiS",
     },
     [BlingtronApp.ROGUE_OUTLAW]        = {
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_LEGS]] = "BiS",
+
         [50228] = "BiS",
         [50264] = "BiS",
         [133491] = "BiS",
@@ -1091,6 +1245,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260423] = "BiS",
     },
     [BlingtronApp.ROGUE_SUBTLETY]      = {
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_ROGUE[BlingtronApp.SET_HANDS]] = "BiS",
+
         [133499] = "BiS",
         [151307] = "B",
         [193701] = "A",
@@ -1134,6 +1293,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Shaman
     [BlingtronApp.SHAMAN_ELEMENTAL]   = {
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_HANDS]] = "BiS",
+
         [50259] = "D",
         [151310] = "D",
         [193708] = "BiS",
@@ -1167,6 +1331,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [251215] = "BiS",
     },
     [BlingtronApp.SHAMAN_ENHANCEMENT] = {
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_HANDS]] = "BiS",
+
         [151307] = "C",
         [193701] = "BiS",
         [237850] = "BiS",
@@ -1207,6 +1376,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [252420] = "A",
     },
     [BlingtronApp.SHAMAN_RESTORATION] = {
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_SHAMAN[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151340] = "C",
         [193708] = "BiS",
         [193718] = "A",
@@ -1242,6 +1416,11 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Warlock
     [BlingtronApp.WARLOCK_AFFLICTION]  = {
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_LEGS]] = "BiS",
+
         [50259] = "C",
         [151310] = "C",
         [239648] = "BiS",
@@ -1274,6 +1453,12 @@ BlingtronApp.BisList.wowhead_overall = {
         [251217] = "BiS",
     },
     [BlingtronApp.WARLOCK_DEMONOLOGY]  = {
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_LEGS]] = "BiS",
+
+
         [50228] = "BiS",
         [50259] = "C",
         [151310] = "C",
@@ -1305,6 +1490,12 @@ BlingtronApp.BisList.wowhead_overall = {
         [251085] = "BiS",
     },
     [BlingtronApp.WARLOCK_DESTRUCTION] = {
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_WARLOCK[BlingtronApp.SET_LEGS]] = "BiS",
+
+
         [50259] = "C",
         [151310] = "C",
         [239656] = "BiS",
@@ -1339,6 +1530,12 @@ BlingtronApp.BisList.wowhead_overall = {
 
     -- Warrior
     [BlingtronApp.WARRIOR_ARMS]        = {
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_LEGS]] = "BiS",
+
+
         [151307] = "C",
         [193701] = "S",
         [193719] = "C",
@@ -1369,6 +1566,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.WARRIOR_FURY]        = {
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_HEAD]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [151332] = "BiS",
         [193701] = "S",
@@ -1400,6 +1602,11 @@ BlingtronApp.BisList.wowhead_overall = {
         [260235] = "A",
     },
     [BlingtronApp.WARRIOR_PROTECTION]  = {
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_SHOULDERS]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_CHEST]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_HANDS]] = "BiS",
+        [BlingtronApp.SET_WARRIOR[BlingtronApp.SET_LEGS]] = "BiS",
+
         [151307] = "C",
         [151311] = "BiS",
         [151312] = "C",

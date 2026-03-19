@@ -188,21 +188,21 @@ local function CreateMainMenuFrame()
     UIDropDownMenu_SetWidth(sourceDropdown, 200)
     UIDropDownMenu_Initialize(sourceDropdown, function(self, level)
         local keys = BuildSortedSources()
-        local currentSource = BlingtronAppDB.bisListSource
+        local selectedKey = BlingtronApp.Helpers.getBisListSourceKey()
         for _, key in ipairs(keys) do
             local source = BlingtronApp.BisListSources[key]
             local info = UIDropDownMenu_CreateInfo()
             info.text = source.label
             info.arg1 = key
             info.func = OnSourceSelected
-            info.checked = (key == currentSource)
+            info.checked = (key == selectedKey)
             UIDropDownMenu_AddButton(info, level)
         end
     end)
 
-    local currentKey = BlingtronAppDB.bisListSource
-    local currentSource = BlingtronApp.BisListSources[currentKey]
-    UIDropDownMenu_SetText(sourceDropdown, currentSource and currentSource.label)
+    local initialKey = BlingtronApp.Helpers.getBisListSourceKey()
+    local initialSource = initialKey and BlingtronApp.BisListSources[initialKey]
+    UIDropDownMenu_SetText(sourceDropdown, initialSource and initialSource.label)
 
     -- Minimap button toggle
     local minimapCheckbox = CreateFrame("CheckButton", "BlingtronAppMinimapCheckbox", mainMenuFrame, "UICheckButtonTemplate")
