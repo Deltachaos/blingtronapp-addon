@@ -92,6 +92,61 @@ local function getSpecForCandidate(name)
     return nil
 end
 
+-- Refresh spec cache for all group members while units are resolvable (e.g. in range).
+-- Called on roster changes and when leaving combat so out-of-range inspects still have data.
+local function warmCandidateSpecCache()
+    local function warmUnit(unit)
+        if not UnitExists(unit) then return end
+        local name, realm = UnitFullName(unit)
+        if not name or name == "" then return end
+        if not realm or realm == "" then
+            realm = GetRealmName()
+        end
+        local specID = getSpecForCandidate(name .. "-" .. realm)
+        print("Warming spec cache for " .. name .. "-" .. (realm or "") .. ": " .. tostring(specID))
+    end
+
+    warmUnit("player")
+
+    if IsInRaid() then
+        for i = 1, GetNumGroupMembers() do
+            warmUnit("raid" .. i)
+        end
+    elseif IsInGroup() then
+        for i = 1, 4 do
+            warmUnit("party" .. i)
+        end
+    end
+end
+
+local warmCacheDebounce
+local function scheduleWarmCandidateSpecCache()
+    if warmCacheDebounce then
+        warmCacheDebounce:Cancel()
+    end
+    warmCacheDebounce = C_Timer.NewTimer(0.35, function()
+        warmCacheDebounce = nil
+        warmCandidateSpecCache()
+    end)
+end
+
+-- Warm triggers: roster/combat (above), plus signals that often mean units are inspectable.
+-- PARTY_MEMBER_ENABLE: member becomes available (historically used for in-range; payload is unit id).
+-- PLAYER_TARGET_CHANGED / UPDATE_MOUSEOVER_UNIT: target/mouseover is frequently in inspect range.
+-- PLAYER_ENTERING_WORLD: after loads/zones, group members are often valid for a moment.
+local specCacheWarmFrame = CreateFrame("Frame")
+specCacheWarmFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+specCacheWarmFrame:RegisterEvent("PARTY_MEMBER_ENABLE")
+specCacheWarmFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+specCacheWarmFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+specCacheWarmFrame:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_REGEN_ENABLED" then
+        warmCandidateSpecCache()
+    else
+        scheduleWarmCandidateSpecCache()
+    end
+end)
+
 local function bisListSourceKeyHasItems(sourceKey)
     local source = BlingtronApp.BisListSources[sourceKey]
     if not source then return false end
@@ -131,9 +186,10 @@ local function getBisList()
 end
 
 BlingtronApp.Helpers = {
-    normalizeKey           = normalizeKey,
-    lookupByName           = lookupByName,
-    getSpecForCandidate    = getSpecForCandidate,
-    getBisListSourceKey    = getBisListSourceKey,
-    getBisList             = getBisList,
+    normalizeKey              = normalizeKey,
+    lookupByName              = lookupByName,
+    getSpecForCandidate       = getSpecForCandidate,
+    warmCandidateSpecCache    = warmCandidateSpecCache,
+    getBisListSourceKey       = getBisListSourceKey,
+    getBisList                = getBisList,
 }
