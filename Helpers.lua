@@ -102,8 +102,7 @@ local function warmCandidateSpecCache()
         if not realm or realm == "" then
             realm = GetRealmName()
         end
-        local specID = getSpecForCandidate(name .. "-" .. realm)
-        print("Warming spec cache for " .. name .. "-" .. (realm or "") .. ": " .. tostring(specID))
+        getSpecForCandidate(name .. "-" .. realm)
     end
 
     warmUnit("player")
