@@ -11,6 +11,7 @@
 
 if not BlingtronApp or not BlingtronApp.RC then return end
 
+local Player              = RCLootCouncil.Require "Data.Player"
 local RC                  = BlingtronApp.RC
 local addon               = RC.addon
 local RCVotingFrame       = RC.RCVotingFrame
@@ -86,8 +87,8 @@ function Column:MakeCellUpdate()
         local session = RCVotingFrame:GetCurrentSession()
         local sessionEntry = lootTable and lootTable[session]
         local itemID = sessionEntry and sessionEntry.itemID
-        local candidate = sessionEntry and sessionEntry.candidates and sessionEntry.candidates[name]
-        local specID = candidate and candidate.specID
+        local player = Player:Get(name)
+        local specID = player and player.specID
         if specID and specID <= 0 then
             specID = nil
         end
