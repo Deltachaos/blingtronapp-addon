@@ -79,12 +79,10 @@ function votingFrameModule:UpdateSortNext()
         end
     end
 
-    local frame = RCVotingFrame:GetFrame()
-    if frame and frame.st and frame.st.SetDisplayCols then
-        frame.st:SetDisplayCols(RCVotingFrame.scrollCols)
-        if frame.SetWidth and frame.st.frame then
-            frame:SetWidth(frame.st.frame:GetWidth() + 20)
-        end
+    -- Never GetFrame() here: early call duplicates the VF and breaks RC tooltips.
+    local vf = RCVotingFrame.frame
+    if vf and vf.st and vf.st.UpdateSt then
+        vf.st:UpdateSt()
     end
 end
 

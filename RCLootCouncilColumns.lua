@@ -15,7 +15,6 @@ local RC                  = BlingtronApp.RC
 local addon               = RC.addon
 local RCVotingFrame       = RC.RCVotingFrame
 local lookupByName        = BlingtronApp.Helpers.lookupByName
-local getSpecForCandidate = BlingtronApp.Helpers.getSpecForCandidate
 local logo                = BlingtronApp.logoIconSmall
 
 -- =============================================================================
@@ -85,8 +84,14 @@ function Column:MakeCellUpdate()
 
         local lootTable = addon:GetLootTable()
         local session = RCVotingFrame:GetCurrentSession()
-        local itemID = lootTable and lootTable[session] and lootTable[session].itemID
-        local specID = getSpecForCandidate(name)
+        local sessionEntry = lootTable and lootTable[session]
+        local itemID = sessionEntry and sessionEntry.itemID
+        local candidate = sessionEntry and sessionEntry.candidates and sessionEntry.candidates[name]
+        local specID = candidate and candidate.specID
+        if specID and specID <= 0 then
+            specID = nil
+        end
+        print("Player: " .. name .. " Item: " .. itemID .. " Spec: " .. specID)
         local value = col:GetValue(name, itemID, specID)
         if not value then return end
 
