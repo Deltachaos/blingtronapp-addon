@@ -92,7 +92,6 @@ function Column:MakeCellUpdate()
         if specID and specID <= 0 then
             specID = nil
         end
-        print("Player: " .. name .. " Item: " .. itemID .. " Spec: " .. specID)
         local value = col:GetValue(name, itemID, specID)
         if not value then return end
 
