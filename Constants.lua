@@ -60,6 +60,49 @@ BlingtronApp.WARRIOR_ARMS           = 71
 BlingtronApp.WARRIOR_FURY           = 72
 BlingtronApp.WARRIOR_PROTECTION     = 73
 
+--- Ordered SpecializationIDs for UI (spec editor dropdown, etc.). Matches bundled BiS data coverage.
+BlingtronApp.ALL_CLASS_SPEC_IDS = {
+    BlingtronApp.DEATH_KNIGHT_BLOOD,
+    BlingtronApp.DEATH_KNIGHT_FROST,
+    BlingtronApp.DEATH_KNIGHT_UNHOLY,
+    BlingtronApp.DEMON_HUNTER_HAVOC,
+    BlingtronApp.DEMON_HUNTER_VENGEANCE,
+    BlingtronApp.DEMON_HUNTER_DEVOURER,
+    BlingtronApp.DRUID_BALANCE,
+    BlingtronApp.DRUID_FERAL,
+    BlingtronApp.DRUID_GUARDIAN,
+    BlingtronApp.DRUID_RESTORATION,
+    BlingtronApp.EVOKER_DEVASTATION,
+    BlingtronApp.EVOKER_PRESERVATION,
+    BlingtronApp.EVOKER_AUGMENTATION,
+    BlingtronApp.HUNTER_BEAST_MASTERY,
+    BlingtronApp.HUNTER_MARKSMANSHIP,
+    BlingtronApp.HUNTER_SURVIVAL,
+    BlingtronApp.MAGE_ARCANE,
+    BlingtronApp.MAGE_FIRE,
+    BlingtronApp.MAGE_FROST,
+    BlingtronApp.MONK_BREWMASTER,
+    BlingtronApp.MONK_MISTWEAVER,
+    BlingtronApp.MONK_WINDWALKER,
+    BlingtronApp.PALADIN_HOLY,
+    BlingtronApp.PALADIN_PROTECTION,
+    BlingtronApp.PALADIN_RETRIBUTION,
+    BlingtronApp.PRIEST_DISCIPLINE,
+    BlingtronApp.PRIEST_HOLY,
+    BlingtronApp.PRIEST_SHADOW,
+    BlingtronApp.ROGUE_ASSASSINATION,
+    BlingtronApp.ROGUE_OUTLAW,
+    BlingtronApp.ROGUE_SUBTLETY,
+    BlingtronApp.SHAMAN_ELEMENTAL,
+    BlingtronApp.SHAMAN_ENHANCEMENT,
+    BlingtronApp.SHAMAN_RESTORATION,
+    BlingtronApp.WARLOCK_AFFLICTION,
+    BlingtronApp.WARLOCK_DEMONOLOGY,
+    BlingtronApp.WARLOCK_DESTRUCTION,
+    BlingtronApp.WARRIOR_ARMS,
+    BlingtronApp.WARRIOR_FURY,
+    BlingtronApp.WARRIOR_PROTECTION,
+}
 
 BlingtronApp.SET_HEAD = "head"
 BlingtronApp.SET_SHOULDERS = "shoulders"

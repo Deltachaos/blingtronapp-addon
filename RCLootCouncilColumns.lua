@@ -16,6 +16,7 @@ local RC                  = BlingtronApp.RC
 local addon               = RC.addon
 local RCVotingFrame       = RC.RCVotingFrame
 local lookupByName        = BlingtronApp.Helpers.lookupByName
+local normalizeKey        = BlingtronApp.Helpers.normalizeKey
 local logo                = BlingtronApp.logoIconSmall
 
 -- =============================================================================
@@ -115,22 +116,82 @@ end
 -- COLUMN: BiS
 -- =============================================================================
 
+local function itemMapGet(map, itemID)
+    if not map or not itemID then return nil end
+    return map[itemID] or map[tostring(itemID)]
+end
+
+local function playerHasAnyCustomPlayerBis(playerEntry)
+    if not playerEntry or type(playerEntry) ~= "table" then return false end
+    if playerEntry.all and next(playerEntry.all) ~= nil then return true end
+    if playerEntry.specs then
+        for _, specMap in pairs(playerEntry.specs) do
+            if type(specMap) == "table" and next(specMap) ~= nil then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function getCustomSpecBisMap(specID)
+    if not specID or not BlingtronAppDB or not BlingtronAppDB.customSpecBis then return nil end
+    local db = BlingtronAppDB.customSpecBis
+    local t = db[specID] or db[tostring(specID)]
+    if type(t) ~= "table" or next(t) == nil then return nil end
+    return t
+end
+
 local BisColumn = Column:Extend("blingtron_bis", "BiS", 50, 8)
 
+--- Resolution order (mutually exclusive tiers):
+--- 1) Custom player BIS — if this player has any CSV rows, ONLY that list applies (no spec/source lists).
+--- 2) Custom spec BIS — if this spec has any saved rows, ONLY that list applies (not the selected source).
+--- 3) Selected BiS list source (e.g. Wowhead).
 function BisColumn:GetValue(name, itemID, specID)
-    if not itemID or not specID then return nil end
+    if not itemID then return nil end
+
+    local customPlayerBis = BlingtronAppDB and BlingtronAppDB.customPlayerBis
+    local playerEntry = nil
+    if customPlayerBis and name then
+        local playerKey = normalizeKey(name)
+        playerEntry = playerKey and customPlayerBis[playerKey]
+    end
+
+    if playerHasAnyCustomPlayerBis(playerEntry) then
+        if specID and playerEntry.specs then
+            local specMap = playerEntry.specs[specID] or playerEntry.specs[tostring(specID)]
+            local v = itemMapGet(specMap, itemID)
+            if v then return v end
+        end
+        local v = itemMapGet(playerEntry.all, itemID)
+        if v then return v end
+        return nil
+    end
+
+    if specID then
+        local customSpecMap = getCustomSpecBisMap(specID)
+        if customSpecMap then
+            local v = itemMapGet(customSpecMap, itemID)
+            if v then return v end
+            return nil
+        end
+    end
+
+    if not specID then return nil end
+
     local bisList = BlingtronApp.Helpers.getBisList()
     local entry = bisList[specID]
-
-    if not entry then return nil end
-    return entry[itemID]
+    if not entry or next(entry) == nil then return nil end
+    return itemMapGet(entry, itemID)
 end
 
 function BisColumn:GetTooltip(value)
     if value == "BiS" then
         return "BiS / Trinket tier", "Best in slot for this spec."
     end
-    return "BiS / Trinket tier", "Trinket tier: " .. value
+    -- Tier letters (A/B/…) or custom CSV note text
+    return "BiS / Trinket tier", value
 end
 
 -- =============================================================================
