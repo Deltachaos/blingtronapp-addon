@@ -4,6 +4,7 @@ local NAME_W = 210
 local TIER_W = 88
 local SAVE_W = 88
 local ITEM_W = 58
+local ADD_W = 78
 local ROW_H = 40
 local HEADER_H = 22
 local PAD = 8
@@ -39,6 +40,8 @@ local subtitle
 local scrollFrame
 local scrollChild
 local statusText
+local addMenuFrame
+local addMenuRow
 local sortKey = "score"
 local sortAsc = false
 local RefreshBoard
@@ -74,8 +77,10 @@ local function itemIconTexture(itemID)
     return nil
 end
 
-local function contentWidth(maxItems)
-    return PAD + NAME_W + TIER_W + SAVE_W + (maxItems * ITEM_W) + PAD
+local function contentWidth(maxItems, maxExtraItems)
+    maxItems = maxItems or 0
+    maxExtraItems = maxExtraItems or 0
+    return PAD + NAME_W + TIER_W + SAVE_W + (maxItems * ITEM_W) + (maxExtraItems * ITEM_W) + ADD_W + PAD
 end
 
 local function wipeChildren(parent)
@@ -158,7 +163,56 @@ local function sortRows(rows)
     end)
 end
 
-local function makeItemCell(parent, x, y, item)
+local function applyStatusVisual(icon, statusFS, status)
+    if status == "rolled" then
+        setQualityText(statusFS, 5, "BR")
+        icon:SetDesaturated(true)
+        icon:SetAlpha(0.7)
+    elseif status == "loot" then
+        setQualityText(statusFS, 3, "Loot")
+        icon:SetDesaturated(true)
+        icon:SetAlpha(0.7)
+    else
+        setQualityText(statusFS, 0, "—")
+        icon:SetDesaturated(false)
+        icon:SetAlpha(1)
+    end
+end
+
+local function showItemTooltip(owner, item)
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    if GameTooltip.SetItemByID then
+        GameTooltip:SetItemByID(item.id)
+    else
+        GameTooltip:SetHyperlink("item:" .. item.id)
+    end
+    GameTooltip:AddLine(" ")
+    if item.extra then
+        GameTooltip:AddLine("Not on your targeted BiS list.", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Bonus-rolled: removed from this loot pool.", 1, 0.5, 0)
+        GameTooltip:AddLine("Click x to remove.", 0.8, 0.8, 0.8)
+    else
+        if item.weight and item.weight > 0 then
+            GameTooltip:AddLine("Bonus-roll weight: " .. item.weight, 1, 1, 1)
+        else
+            GameTooltip:AddLine("Not on your weighted BiS list.", 0.7, 0.7, 0.7)
+        end
+        if item.saving then
+            GameTooltip:AddLine(string.format("BR save: %.1f", item.saving), 1, 1, 1)
+        end
+        if item.status == "rolled" then
+            GameTooltip:AddLine("Status: bonus-rolled (removed from this pool)", 1, 0.5, 0)
+        elseif item.status == "loot" then
+            GameTooltip:AddLine("Status: looted normally (still in bonus-roll pool)", 0, 0.44, 0.87)
+        else
+            GameTooltip:AddLine("Status: not looted yet", 0.7, 0.7, 0.7)
+        end
+        GameTooltip:AddLine("Click the status to cycle: — → BR → Loot.", 0.8, 0.8, 0.8)
+    end
+    GameTooltip:Show()
+end
+
+local function makeItemCell(parent, x, y, item, sourceKey)
     local cell = CreateFrame("Frame", nil, parent)
     cell:SetSize(ITEM_W - 4, ROW_H - 4)
     cell:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -178,57 +232,75 @@ local function makeItemCell(parent, x, y, item)
         icon:SetColorTexture(0.2, 0.2, 0.2, 1)
     end
 
-    local scoreFS = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    scoreFS:SetPoint("LEFT", iconBtn, "RIGHT", 3, 0)
-    scoreFS:SetJustifyH("LEFT")
-    if item.weight and item.weight > 0 then
-        setQualityText(scoreFS, WEIGHT_QUALITY[item.weight] or 1, tostring(item.weight))
+    if item.extra then
+        local removeBtn = CreateFrame("Button", nil, cell)
+        removeBtn:SetSize(14, 14)
+        removeBtn:SetPoint("LEFT", iconBtn, "RIGHT", 2, 0)
+        removeBtn:RegisterForClicks("LeftButtonUp")
+        removeBtn:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
+        local removeFS = removeBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        removeFS:SetAllPoints()
+        removeFS:SetJustifyH("CENTER")
+        removeFS:SetText("x")
+        removeFS:SetTextColor(1, 0.3, 0.3)
+        removeBtn:SetScript("OnClick", function()
+            GameTooltip:Hide()
+            if BlingtronApp.BonusRoll.SetItemStatus(sourceKey, item.id, "open") then
+                RefreshBoard()
+            end
+        end)
+        removeBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Remove bonus-roll mark")
+            GameTooltip:AddLine("Puts this item back in the loot pool and Add BR list.", 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        removeBtn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
     else
-        setQualityText(scoreFS, 0, "-")
+        local scoreFS = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        scoreFS:SetPoint("LEFT", iconBtn, "RIGHT", 3, 0)
+        scoreFS:SetJustifyH("LEFT")
+        if item.weight and item.weight > 0 then
+            setQualityText(scoreFS, WEIGHT_QUALITY[item.weight] or 1, tostring(item.weight))
+        else
+            setQualityText(scoreFS, 0, "-")
+        end
     end
 
-    local statusFS = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    statusFS:SetPoint("TOPLEFT", iconBtn, "BOTTOMLEFT", 0, -2)
-    statusFS:SetPoint("RIGHT", cell, "RIGHT", -2, 0)
+    local statusBtn = CreateFrame("Button", nil, cell)
+    statusBtn:SetPoint("TOPLEFT", iconBtn, "BOTTOMLEFT", -2, -1)
+    statusBtn:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", 0, 0)
+    statusBtn:RegisterForClicks("LeftButtonUp")
+    statusBtn:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    local statusFS = statusBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    statusFS:SetAllPoints()
     statusFS:SetJustifyH("LEFT")
-    if item.status == "rolled" then
-        setQualityText(statusFS, 5, "BR")
-        icon:SetDesaturated(true)
-        icon:SetAlpha(0.7)
-    elseif item.status == "loot" then
-        setQualityText(statusFS, 3, "Loot")
-        icon:SetDesaturated(true)
-        icon:SetAlpha(0.7)
+    applyStatusVisual(icon, statusFS, item.status)
+
+    if item.extra then
+        statusBtn:EnableMouse(false)
     else
-        statusFS:SetText("")
-        icon:SetDesaturated(false)
-        icon:SetAlpha(1)
+        statusBtn:SetScript("OnClick", function()
+            GameTooltip:Hide()
+            if BlingtronApp.BonusRoll.CycleItemStatus(sourceKey, item.id) then
+                RefreshBoard()
+            end
+        end)
+        statusBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Item status")
+            GameTooltip:AddLine("Click to cycle: not looted (—), bonus-rolled (BR), looted (Loot).", 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        statusBtn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
     end
 
     iconBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        if GameTooltip.SetItemByID then
-            GameTooltip:SetItemByID(item.id)
-        else
-            GameTooltip:SetHyperlink("item:" .. item.id)
-        end
-        GameTooltip:AddLine(" ")
-        if item.weight and item.weight > 0 then
-            GameTooltip:AddLine("Bonus-roll weight: " .. item.weight, 1, 1, 1)
-        else
-            GameTooltip:AddLine("Not on your weighted BiS list.", 0.7, 0.7, 0.7)
-        end
-        if item.saving then
-            GameTooltip:AddLine(string.format("BR save: %.1f", item.saving), 1, 1, 1)
-        end
-        if item.status == "rolled" then
-            GameTooltip:AddLine("Status: bonus-rolled (removed from this pool)", 1, 0.5, 0)
-        elseif item.status == "loot" then
-            GameTooltip:AddLine("Status: looted normally (still in bonus-roll pool)", 0, 0.44, 0.87)
-        else
-            GameTooltip:AddLine("Status: not acquired", 0.7, 0.7, 0.7)
-        end
-        GameTooltip:Show()
+        showItemTooltip(self, item)
     end)
     iconBtn:SetScript("OnLeave", function()
         GameTooltip:Hide()
@@ -237,8 +309,48 @@ local function makeItemCell(parent, x, y, item)
     return cell
 end
 
-local function makeRow(parent, row, y, index, maxItems)
-    local width = contentWidth(maxItems)
+local function addMenuInitialize(_, level)
+    if level ~= 1 then
+        return
+    end
+    local row = addMenuRow
+    local list = row and row.extraCandidates or {}
+    if #list == 0 then
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = "No other loot-pool items"
+        info.isTitle = true
+        info.notCheckable = true
+        UIDropDownMenu_AddButton(info, level)
+        return
+    end
+    for _, item in ipairs(list) do
+        local itemID = item.id
+        local sourceKey = row.key
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = item.name or ("Item " .. tostring(itemID))
+        info.notCheckable = true
+        info.icon = itemIconTexture(itemID)
+        info.func = function()
+            CloseDropDownMenus()
+            if BlingtronApp.BonusRoll.SetItemStatus(sourceKey, itemID, "rolled") then
+                RefreshBoard()
+            end
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+local function openAddMenu(anchor, row)
+    addMenuRow = row
+    if not addMenuFrame then
+        addMenuFrame = CreateFrame("Frame", "BlingtronAppBonusRollAddMenu", UIParent, "UIDropDownMenuTemplate")
+    end
+    UIDropDownMenu_Initialize(addMenuFrame, addMenuInitialize, "MENU")
+    ToggleDropDownMenu(1, nil, addMenuFrame, anchor, 0, 0)
+end
+
+local function makeRow(parent, row, y, index, maxItems, maxExtraItems)
+    local width = contentWidth(maxItems, maxExtraItems)
     local rowFrame = CreateFrame("Frame", nil, parent)
     rowFrame:SetSize(width, ROW_H)
     rowFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
@@ -295,10 +407,42 @@ local function makeRow(parent, row, y, index, maxItems)
     for i = 1, maxItems do
         local item = row.items[i]
         if item then
-            makeItemCell(rowFrame, x, -2, item)
+            makeItemCell(rowFrame, x, -2, item, row.key)
         end
         x = x + ITEM_W
     end
+
+    local extraItems = row.extraItems or {}
+    for i = 1, maxExtraItems do
+        local item = extraItems[i]
+        if item then
+            makeItemCell(rowFrame, x, -2, item, row.key)
+        end
+        x = x + ITEM_W
+    end
+
+    local addBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+    addBtn:SetSize(ADD_W - 6, 22)
+    addBtn:SetPoint("LEFT", rowFrame, "LEFT", x + 2, 0)
+    addBtn:SetText("Add BR")
+    local hasCandidates = row.extraCandidates and #row.extraCandidates > 0
+    if hasCandidates then
+        addBtn:Enable()
+    else
+        addBtn:Disable()
+    end
+    addBtn:SetScript("OnClick", function(self)
+        openAddMenu(self, row)
+    end)
+    addBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Add bonus-rolled item")
+        GameTooltip:AddLine("Mark other loot-pool items (not on your targeted list) as bonus-rolled. That removes them from this source's remaining pool.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    addBtn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
 
     return rowFrame
 end
@@ -306,6 +450,13 @@ end
 function RefreshBoard()
     if not frame or not scrollChild then
         return
+    end
+    if CloseDropDownMenus then
+        CloseDropDownMenus()
+    end
+    local oldScroll = 0
+    if scrollFrame then
+        oldScroll = scrollFrame:GetVerticalScroll() or 0
     end
     wipeChildren(scrollChild)
 
@@ -323,7 +474,8 @@ function RefreshBoard()
     sortRows(data.rows)
 
     local maxItems = data.maxItems or 0
-    local width = contentWidth(maxItems)
+    local maxExtraItems = data.maxExtraItems or 0
+    local width = contentWidth(maxItems, maxExtraItems)
     local height = HEADER_H + (#data.rows * ROW_H) + PAD
 
     local header = CreateFrame("Frame", nil, scrollChild)
@@ -335,19 +487,27 @@ function RefreshBoard()
     addHeaderCell(header, PAD, NAME_W, "Name")
     addSortHeader(header, PAD + NAME_W, TIER_W, "BR Tier", "score", "brTier")
     addSortHeader(header, PAD + NAME_W + TIER_W, SAVE_W, "BR Save", "saving", "brSave")
+    local itemX = PAD + NAME_W + TIER_W + SAVE_W
     for i = 1, maxItems do
-        addHeaderCell(header, PAD + NAME_W + TIER_W + SAVE_W + (i - 1) * ITEM_W, ITEM_W, tostring(i))
+        addHeaderCell(header, itemX + (i - 1) * ITEM_W, ITEM_W, tostring(i))
     end
+    local extraX = itemX + maxItems * ITEM_W
+    for i = 1, maxExtraItems do
+        addHeaderCell(header, extraX + (i - 1) * ITEM_W, ITEM_W, "+")
+    end
+    addHeaderCell(header, extraX + maxExtraItems * ITEM_W, ADD_W, "Add")
 
     for i, row in ipairs(data.rows) do
         local y = -(HEADER_H + (i - 1) * ROW_H)
-        makeRow(scrollChild, row, y, i, maxItems)
+        makeRow(scrollChild, row, y, i, maxItems, maxExtraItems)
     end
 
     scrollChild:SetSize(width, height)
     frame:SetWidth(math.max(420, width + 44))
     if scrollFrame then
-        scrollFrame:SetVerticalScroll(0)
+        local viewHeight = scrollFrame:GetHeight() or 0
+        local maxScroll = math.max(0, height - viewHeight)
+        scrollFrame:SetVerticalScroll(math.min(oldScroll, maxScroll))
     end
 end
 

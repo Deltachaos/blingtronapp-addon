@@ -567,6 +567,7 @@ local function GetBoardData()
 
     local rows = {}
     local maxItems = 0
+    local maxExtraItems = 0
     for _, scored in ipairs(results) do
         local rolled = charDB.rolled[scored.key] or {}
         local items = {}
@@ -611,6 +612,39 @@ local function GetBoardData()
             maxItems = #items
         end
 
+        local extraItems = {}
+        local extraCandidates = {}
+        for _, item in ipairs(scored.source.items) do
+            local weight = weights[item.id]
+            if type(weight) ~= "number" or weight <= 0 then
+                local entry = {
+                    id = item.id,
+                    name = item.name,
+                    weight = 0,
+                    status = "rolled",
+                    extra = true,
+                }
+                if isTracked(rolled, item.id) then
+                    extraItems[#extraItems + 1] = entry
+                else
+                    extraCandidates[#extraCandidates + 1] = entry
+                end
+            end
+        end
+        local function byName(a, b)
+            local an = a.name or ""
+            local bn = b.name or ""
+            if an ~= bn then
+                return an < bn
+            end
+            return a.id < b.id
+        end
+        table.sort(extraItems, byName)
+        table.sort(extraCandidates, byName)
+        if #extraItems > maxExtraItems then
+            maxExtraItems = #extraItems
+        end
+
         local name, subName = sourceDisplayName(scored.source)
         local tier = scoreToTier(scored.score, maxScore)
         rows[#rows + 1] = {
@@ -624,6 +658,8 @@ local function GetBoardData()
             remaining = scored.remaining,
             wantedRemaining = scored.wantedRemaining,
             items = items,
+            extraItems = extraItems,
+            extraCandidates = extraCandidates,
         }
     end
 
@@ -633,6 +669,7 @@ local function GetBoardData()
         bisLabel = bisListLabel(),
         maxScore = maxScore,
         maxItems = maxItems,
+        maxExtraItems = maxExtraItems,
         rows = rows,
     }
 end
@@ -863,6 +900,69 @@ local function Unroll(itemID, sourceToken)
     return true, "Cleared bonus-roll mark for " .. itemLink(itemID) .. " on " .. formatSourceLabel(source) .. "."
 end
 
+local function itemStatus(charDB, sourceKey, itemID)
+    local rolled = charDB.rolled[sourceKey]
+    if isTracked(rolled, itemID) then
+        return "rolled"
+    end
+    if isTracked(charDB.owned, itemID) then
+        return "loot"
+    end
+    return "open"
+end
+
+local STATUS_CYCLE = {
+    open = "rolled",
+    rolled = "loot",
+    loot = "open",
+}
+
+--- Set local tracking for the bonus-roll window. status is "open", "rolled", or "loot".
+local function SetItemStatus(sourceKey, itemID, status)
+    ensureIndex()
+    itemID = tonumber(itemID)
+    if not sourceKey or not itemID then
+        return false
+    end
+    if not sourceByKey[sourceKey] then
+        return false
+    end
+    local charDB = getCharDB()
+    if not charDB then
+        return false
+    end
+
+    local rolled = charDB.rolled[sourceKey]
+    if not rolled then
+        rolled = {}
+        charDB.rolled[sourceKey] = rolled
+    end
+
+    if status == "rolled" then
+        setTracked(rolled, itemID, true)
+        setTracked(charDB.owned, itemID, true)
+    elseif status == "loot" then
+        setTracked(rolled, itemID, nil)
+        setTracked(charDB.owned, itemID, true)
+    else
+        setTracked(rolled, itemID, nil)
+        setTracked(charDB.owned, itemID, nil)
+    end
+    if not next(rolled) then
+        charDB.rolled[sourceKey] = nil
+    end
+    return true
+end
+
+local function CycleItemStatus(sourceKey, itemID)
+    local charDB = getCharDB()
+    if not charDB then
+        return false
+    end
+    local nextStatus = STATUS_CYCLE[itemStatus(charDB, sourceKey, itemID)] or "rolled"
+    return SetItemStatus(sourceKey, itemID, nextStatus)
+end
+
 local function Clear()
     local playerKey = currentPlayerKey()
     if not playerKey then
@@ -1008,6 +1108,8 @@ BlingtronApp.BonusRoll = {
     GetSlotWeights             = GetSlotWeights,
     GetPlayerTracking          = GetPlayerTracking,
     GetSavingValue             = GetSavingValue,
+    SetItemStatus              = SetItemStatus,
+    CycleItemStatus            = CycleItemStatus,
     SaveToTier                 = SaveToTier,
     FormatSaveText             = FormatSaveText,
     COLUMN_HEADER_TIPS         = COLUMN_HEADER_TIPS,
