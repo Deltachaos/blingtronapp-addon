@@ -1,0 +1,402 @@
+-- BlingtronApp - Bonus-roll tracker window (display only)
+
+local NAME_W = 210
+local TIER_W = 88
+local SAVE_W = 88
+local ITEM_W = 58
+local ROW_H = 40
+local HEADER_H = 22
+local PAD = 8
+
+local WEIGHT_QUALITY = {
+    [100] = 6,
+    [75]  = 5,
+    [50]  = 4,
+    [25]  = 3,
+}
+
+local TIER_QUALITY = {
+    BiS = 6,
+    S   = 5,
+    A   = 4,
+    B   = 3,
+    C   = 2,
+    D   = 1,
+}
+
+local QUALITY_FALLBACK = {
+    [0] = { 0.62, 0.62, 0.62 },
+    [1] = { 1.00, 1.00, 1.00 },
+    [2] = { 0.12, 1.00, 0.00 },
+    [3] = { 0.00, 0.44, 0.87 },
+    [4] = { 0.64, 0.21, 0.93 },
+    [5] = { 1.00, 0.50, 0.00 },
+    [6] = { 0.90, 0.80, 0.50 },
+}
+
+local frame
+local subtitle
+local scrollFrame
+local scrollChild
+local statusText
+local sortKey = "score"
+local sortAsc = false
+local RefreshBoard
+
+local function qualityColor(quality)
+    quality = quality or 0
+    if GetItemQualityColor then
+        local r, g, b = GetItemQualityColor(quality)
+        if r then
+            return r, g, b
+        end
+    end
+    local colors = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+    if colors then
+        return colors.r, colors.g, colors.b
+    end
+    local fb = QUALITY_FALLBACK[quality] or QUALITY_FALLBACK[0]
+    return fb[1], fb[2], fb[3]
+end
+
+local function setQualityText(fs, quality, text)
+    fs:SetText(text or "")
+    fs:SetTextColor(qualityColor(quality))
+end
+
+local function itemIconTexture(itemID)
+    if C_Item and C_Item.GetItemIconByID then
+        return C_Item.GetItemIconByID(itemID)
+    end
+    if GetItemIcon then
+        return GetItemIcon(itemID)
+    end
+    return nil
+end
+
+local function contentWidth(maxItems)
+    return PAD + NAME_W + TIER_W + SAVE_W + (maxItems * ITEM_W) + PAD
+end
+
+local function wipeChildren(parent)
+    local kids = { parent:GetChildren() }
+    for i = 1, #kids do
+        kids[i]:Hide()
+        kids[i]:SetParent(nil)
+    end
+end
+
+local function addHeaderCell(parent, x, width, text)
+    local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -4)
+    fs:SetSize(width - 4, HEADER_H - 6)
+    fs:SetJustifyH("LEFT")
+    fs:SetText(text)
+    return fs
+end
+
+local function addSortHeader(parent, x, width, label, key, tipKey)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -2)
+    btn:SetSize(width - 4, HEADER_H - 4)
+    btn:RegisterForClicks("LeftButtonUp")
+    btn:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+
+    local fs = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fs:SetAllPoints()
+    fs:SetJustifyH("LEFT")
+    local marker = ""
+    if sortKey == key then
+        marker = sortAsc and " ^" or " v"
+        fs:SetTextColor(1, 0.82, 0)
+    end
+    fs:SetText(label .. marker)
+
+    btn:SetScript("OnClick", function()
+        if sortKey == key then
+            sortAsc = not sortAsc
+        else
+            sortKey = key
+            sortAsc = false
+        end
+        RefreshBoard()
+    end)
+    btn:SetScript("OnEnter", function(self)
+        local extra = { "Click to sort. Click again to reverse." }
+        if BlingtronApp.BonusRoll and BlingtronApp.BonusRoll.ShowColumnHeaderTooltip and tipKey then
+            BlingtronApp.BonusRoll.ShowColumnHeaderTooltip(self, tipKey, extra)
+            return
+        end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Click to sort")
+        GameTooltip:AddLine("Click again to reverse.", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    return btn
+end
+
+local function sortRows(rows)
+    table.sort(rows, function(a, b)
+        local av, bv
+        if sortKey == "saving" then
+            av = a.saving or -1
+            bv = b.saving or -1
+        else
+            av = a.score or 0
+            bv = b.score or 0
+        end
+        if av == bv then
+            return (a.name or "") < (b.name or "")
+        end
+        if sortAsc then
+            return av < bv
+        end
+        return av > bv
+    end)
+end
+
+local function makeItemCell(parent, x, y, item)
+    local cell = CreateFrame("Frame", nil, parent)
+    cell:SetSize(ITEM_W - 4, ROW_H - 4)
+    cell:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    cell:EnableMouse(false)
+
+    local iconBtn = CreateFrame("Button", nil, cell)
+    iconBtn:SetSize(18, 18)
+    iconBtn:SetPoint("TOPLEFT", 2, -2)
+    iconBtn:EnableMouse(true)
+
+    local icon = iconBtn:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    local tex = itemIconTexture(item.id)
+    if tex then
+        icon:SetTexture(tex)
+    else
+        icon:SetColorTexture(0.2, 0.2, 0.2, 1)
+    end
+
+    local scoreFS = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    scoreFS:SetPoint("LEFT", iconBtn, "RIGHT", 3, 0)
+    scoreFS:SetJustifyH("LEFT")
+    if item.weight and item.weight > 0 then
+        setQualityText(scoreFS, WEIGHT_QUALITY[item.weight] or 1, tostring(item.weight))
+    else
+        setQualityText(scoreFS, 0, "-")
+    end
+
+    local statusFS = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    statusFS:SetPoint("TOPLEFT", iconBtn, "BOTTOMLEFT", 0, -2)
+    statusFS:SetPoint("RIGHT", cell, "RIGHT", -2, 0)
+    statusFS:SetJustifyH("LEFT")
+    if item.status == "rolled" then
+        setQualityText(statusFS, 5, "BR")
+        icon:SetDesaturated(true)
+        icon:SetAlpha(0.7)
+    elseif item.status == "loot" then
+        setQualityText(statusFS, 3, "Loot")
+        icon:SetDesaturated(true)
+        icon:SetAlpha(0.7)
+    else
+        statusFS:SetText("")
+        icon:SetDesaturated(false)
+        icon:SetAlpha(1)
+    end
+
+    iconBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if GameTooltip.SetItemByID then
+            GameTooltip:SetItemByID(item.id)
+        else
+            GameTooltip:SetHyperlink("item:" .. item.id)
+        end
+        GameTooltip:AddLine(" ")
+        if item.weight and item.weight > 0 then
+            GameTooltip:AddLine("Bonus-roll weight: " .. item.weight, 1, 1, 1)
+        else
+            GameTooltip:AddLine("Not on your weighted BiS list.", 0.7, 0.7, 0.7)
+        end
+        if item.saving then
+            GameTooltip:AddLine(string.format("BR save: %.1f", item.saving), 1, 1, 1)
+        end
+        if item.status == "rolled" then
+            GameTooltip:AddLine("Status: bonus-rolled (removed from this pool)", 1, 0.5, 0)
+        elseif item.status == "loot" then
+            GameTooltip:AddLine("Status: looted normally (still in bonus-roll pool)", 0, 0.44, 0.87)
+        else
+            GameTooltip:AddLine("Status: not acquired", 0.7, 0.7, 0.7)
+        end
+        GameTooltip:Show()
+    end)
+    iconBtn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    return cell
+end
+
+local function makeRow(parent, row, y, index, maxItems)
+    local width = contentWidth(maxItems)
+    local rowFrame = CreateFrame("Frame", nil, parent)
+    rowFrame:SetSize(width, ROW_H)
+    rowFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
+
+    local bg = rowFrame:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    if index % 2 == 0 then
+        bg:SetColorTexture(1, 1, 1, 0.04)
+    else
+        bg:SetColorTexture(0, 0, 0, 0.15)
+    end
+
+    local x = PAD
+    local nameFS = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    nameFS:SetPoint("TOPLEFT", rowFrame, "TOPLEFT", x, -4)
+    nameFS:SetSize(NAME_W - 6, 16)
+    nameFS:SetJustifyH("LEFT")
+    nameFS:SetJustifyV("TOP")
+    nameFS:SetText(row.name)
+
+    local subFS = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    subFS:SetPoint("TOPLEFT", nameFS, "BOTTOMLEFT", 0, 0)
+    subFS:SetSize(NAME_W - 6, 14)
+    subFS:SetJustifyH("LEFT")
+    subFS:SetText(row.subName or "")
+
+    x = x + NAME_W
+    local tierFS = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    tierFS:SetPoint("TOPLEFT", rowFrame, "TOPLEFT", x, -4)
+    tierFS:SetSize(TIER_W - 6, ROW_H - 8)
+    tierFS:SetJustifyH("LEFT")
+    tierFS:SetJustifyV("MIDDLE")
+    if row.tier then
+        setQualityText(tierFS, TIER_QUALITY[row.tier] or 1, string.format("%s (%.1f)", row.tier, row.score))
+    else
+        setQualityText(tierFS, 0, string.format("%.1f", row.score or 0))
+    end
+
+    x = x + TIER_W
+    local saveFS = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    saveFS:SetPoint("TOPLEFT", rowFrame, "TOPLEFT", x, -4)
+    saveFS:SetSize(SAVE_W - 6, ROW_H - 8)
+    saveFS:SetJustifyH("LEFT")
+    saveFS:SetJustifyV("MIDDLE")
+    if row.saving then
+        local saveText = BlingtronApp.BonusRoll.FormatSaveText(row.saving)
+        local saveTier = BlingtronApp.BonusRoll.SaveToTier(row.saving)
+        setQualityText(saveFS, TIER_QUALITY[saveTier] or 1, saveText or string.format("%.1f", row.saving))
+    else
+        setQualityText(saveFS, 0, "-")
+    end
+
+    x = x + SAVE_W
+    for i = 1, maxItems do
+        local item = row.items[i]
+        if item then
+            makeItemCell(rowFrame, x, -2, item)
+        end
+        x = x + ITEM_W
+    end
+
+    return rowFrame
+end
+
+function RefreshBoard()
+    if not frame or not scrollChild then
+        return
+    end
+    wipeChildren(scrollChild)
+
+    local data, err = BlingtronApp.BonusRoll.GetBoardData()
+    if not data then
+        subtitle:SetText("")
+        statusText:SetText(err or "Could not load bonus-roll data.")
+        scrollChild:SetSize(400, 40)
+        return
+    end
+
+    subtitle:SetText(data.specName .. "  |  " .. data.bisLabel)
+    statusText:SetText(string.format("%d sources", #data.rows))
+
+    sortRows(data.rows)
+
+    local maxItems = data.maxItems or 0
+    local width = contentWidth(maxItems)
+    local height = HEADER_H + (#data.rows * ROW_H) + PAD
+
+    local header = CreateFrame("Frame", nil, scrollChild)
+    header:SetSize(width, HEADER_H)
+    header:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
+    local headerBg = header:CreateTexture(nil, "BACKGROUND")
+    headerBg:SetAllPoints()
+    headerBg:SetColorTexture(0, 0, 0, 0.45)
+    addHeaderCell(header, PAD, NAME_W, "Name")
+    addSortHeader(header, PAD + NAME_W, TIER_W, "BR Tier", "score", "brTier")
+    addSortHeader(header, PAD + NAME_W + TIER_W, SAVE_W, "BR Save", "saving", "brSave")
+    for i = 1, maxItems do
+        addHeaderCell(header, PAD + NAME_W + TIER_W + SAVE_W + (i - 1) * ITEM_W, ITEM_W, tostring(i))
+    end
+
+    for i, row in ipairs(data.rows) do
+        local y = -(HEADER_H + (i - 1) * ROW_H)
+        makeRow(scrollChild, row, y, i, maxItems)
+    end
+
+    scrollChild:SetSize(width, height)
+    frame:SetWidth(math.max(420, width + 44))
+    if scrollFrame then
+        scrollFrame:SetVerticalScroll(0)
+    end
+end
+
+local function CreateBoardFrame()
+    if frame then
+        return
+    end
+
+    frame = CreateFrame("Frame", "BlingtronAppBonusRollFrame", UIParent, "BasicFrameTemplateWithInset")
+    frame:SetSize(420, 520)
+    frame:SetPoint("CENTER")
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", frame.StartMoving)
+    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:SetFrameStrata("DIALOG")
+    frame:Hide()
+    tinsert(UISpecialFrames, "BlingtronAppBonusRollFrame")
+
+    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOP", frame, "TOP", 0, -5)
+    title:SetText((BlingtronApp.logoIcon or "") .. " Bonus Rolls")
+
+    subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    subtitle:SetPoint("TOP", title, "BOTTOM", 0, -2)
+
+    scrollFrame = CreateFrame("ScrollFrame", "BlingtronAppBonusRollScroll", frame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 12, -48)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -32, 28)
+
+    scrollChild = CreateFrame("Frame", nil, scrollFrame)
+    scrollChild:SetSize(400, 200)
+    scrollFrame:SetScrollChild(scrollChild)
+
+    statusText = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    statusText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 10)
+    statusText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 10)
+    statusText:SetJustifyH("LEFT")
+
+    frame:SetScript("OnShow", RefreshBoard)
+end
+
+function BlingtronApp:ToggleBonusRollFrame()
+    CreateBoardFrame()
+    if frame:IsShown() then
+        frame:Hide()
+    else
+        frame:Show()
+        RefreshBoard()
+    end
+end

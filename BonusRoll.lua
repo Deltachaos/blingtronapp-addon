@@ -467,6 +467,35 @@ local function GetSavingValue(specID, itemID, tracking)
     return best
 end
 
+local SAVE_TIER_THRESHOLDS = {
+    { min = 20, tier = "BiS" },
+    { min = 14, tier = "S" },
+    { min = 9,  tier = "A" },
+    { min = 6,  tier = "B" },
+    { min = 3,  tier = "C" },
+    { min = 0,  tier = "D" },
+}
+
+local function SaveToTier(saving)
+    if type(saving) ~= "number" then
+        return nil
+    end
+    for _, row in ipairs(SAVE_TIER_THRESHOLDS) do
+        if saving >= row.min then
+            return row.tier
+        end
+    end
+    return nil
+end
+
+local function FormatSaveText(saving)
+    local tier = SaveToTier(saving)
+    if not tier then
+        return nil
+    end
+    return string.format("%s (%.1f)", tier, saving)
+end
+
 local function ScoreSources()
     ensureIndex()
     local specID = currentSpecID()
@@ -492,9 +521,125 @@ local function ScoreSources()
     return results, nil, specID
 end
 
+local function scoreToTier(score, maxScore)
+    if type(score) ~= "number" or score <= 0 or type(maxScore) ~= "number" or maxScore <= 0 then
+        return nil
+    end
+    if score >= maxScore - 0.0001 then
+        return "BiS"
+    end
+    local pct = (score / maxScore) * 100
+    local thresholds = BlingtronApp.BIS_TIER_THRESHOLDS
+    if type(thresholds) == "table" then
+        for _, row in ipairs(thresholds) do
+            if type(row) == "table" and type(row.min) == "number" and pct >= row.min then
+                return row.tier
+            end
+        end
+    end
+    return "D"
+end
+
+local function sourceDisplayName(source)
+    if source.kind == "raid" then
+        if source.raidName then
+            return source.name, source.raidName
+        end
+        return source.name, "Raid"
+    end
+    return source.name, "Mythic+"
+end
+
+--- Rows for the bonus-roll window: every dungeon/boss, items, scores, and local have/rolled status.
+local function GetBoardData()
+    local results, err, specID = ScoreSources()
+    if not results then
+        return nil, err
+    end
+    local charDB = getCharDB() or emptyTracking()
+    local weights = GetSlotWeights(specID)
+    local maxScore = 0
+    for _, scored in ipairs(results) do
+        if scored.score > maxScore then
+            maxScore = scored.score
+        end
+    end
+
+    local rows = {}
+    local maxItems = 0
+    for _, scored in ipairs(results) do
+        local rolled = charDB.rolled[scored.key] or {}
+        local items = {}
+        local bestSaving
+        for _, item in ipairs(scored.source.items) do
+            local weight = weights[item.id]
+            if type(weight) ~= "number" then
+                weight = 0
+            end
+            if weight > 0 then
+                local isRolled = isTracked(rolled, item.id) and true or false
+                local isOwned = isTracked(charDB.owned, item.id) and true or false
+                local saving
+                if not isOwned and not isRolled and scored.score > 0 then
+                    saving = weight / scored.score
+                    if not bestSaving or saving > bestSaving then
+                        bestSaving = saving
+                    end
+                end
+                local status = "open"
+                if isRolled then
+                    status = "rolled"
+                elseif isOwned then
+                    status = "loot"
+                end
+                items[#items + 1] = {
+                    id = item.id,
+                    name = item.name,
+                    weight = weight,
+                    saving = saving,
+                    status = status,
+                }
+            end
+        end
+        table.sort(items, function(a, b)
+            if a.weight ~= b.weight then
+                return a.weight > b.weight
+            end
+            return a.id < b.id
+        end)
+        if #items > maxItems then
+            maxItems = #items
+        end
+
+        local name, subName = sourceDisplayName(scored.source)
+        local tier = scoreToTier(scored.score, maxScore)
+        rows[#rows + 1] = {
+            key = scored.key,
+            kind = scored.kind,
+            name = name,
+            subName = subName,
+            score = scored.score,
+            tier = tier,
+            saving = bestSaving,
+            remaining = scored.remaining,
+            wantedRemaining = scored.wantedRemaining,
+            items = items,
+        }
+    end
+
+    return {
+        specID = specID,
+        specName = specDisplayName(specID),
+        bisLabel = bisListLabel(),
+        maxScore = maxScore,
+        maxItems = maxItems,
+        rows = rows,
+    }
+end
+
 local function PrintHelp()
     chat("Bonus-roll commands:")
-    print("  /blingtron bonusroll (br)           rank bonus-roll targets")
+    print("  /blingtron bonusroll (br)           open bonus-roll window")
     print("  /blingtron have <item>              mark owned from normal loot")
     print("  /blingtron unhave <item>            clear owned")
     print("  /blingtron rolled <item> [source]   mark bonus-rolled")
@@ -758,7 +903,11 @@ end
 
 local function HandleCommand(cmd, rest)
     if cmd == "bonusroll" or cmd == "br" then
-        PrintRanking()
+        if BlingtronApp.ToggleBonusRollFrame then
+            BlingtronApp:ToggleBonusRollFrame()
+        else
+            PrintRanking()
+        end
         return true
     elseif cmd == "have" then
         local itemID, _, err = requireItem(rest)
@@ -805,20 +954,64 @@ local function HandleCommand(cmd, rest)
     return false
 end
 
+-- Column-header explanations (RCLootCouncil + bonus-roll window).
+local COLUMN_HEADER_TIPS = {
+    tier = {
+        "Tier",
+        "This player's rank for the current item on the selected BiS list (or a custom player/spec list).",
+        "BiS is best in that slot. S, A, B, C, and D are lower ranks. A percentage is the list's recommendation when available.",
+    },
+    brTier = {
+        "BR Tier",
+        "How good this boss or dungeon is as a bonus-roll target for your spec.",
+        "Based on the expected value of remaining wanted loot. The best source is BiS; others are S–D relative to it. Higher means spend bonus rolls here.",
+    },
+    brSave = {
+        "BR Save",
+        "Value of giving this as regular loot so bonus rolls can be spent on better targets.",
+        "Higher means this source is a worse bonus-roll farm (more junk), so handing the item out avoids wasting rolls there. Shown as a tier plus score: item weight divided by that source's bonus-roll EV.",
+    },
+}
+
+--- Show a wrapped header tooltip. extraLines are appended after a blank line (e.g. sort hints).
+local function ShowColumnHeaderTooltip(owner, key, extraLines)
+    local lines = COLUMN_HEADER_TIPS[key]
+    if not owner or not lines then
+        return
+    end
+    GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+    GameTooltip:SetText(lines[1], 1, 0.82, 0)
+    for i = 2, #lines do
+        GameTooltip:AddLine(lines[i], 1, 1, 1, true)
+    end
+    if extraLines then
+        GameTooltip:AddLine(" ")
+        for i = 1, #extraLines do
+            GameTooltip:AddLine(extraLines[i], 0.8, 0.8, 0.8, true)
+        end
+    end
+    GameTooltip:Show()
+end
+
 BlingtronApp.BonusRoll = {
-    HandleCommand      = HandleCommand,
-    PrintHelp          = PrintHelp,
-    PrintRanking       = PrintRanking,
-    PrintStatus        = PrintStatus,
-    Have               = Have,
-    Unhave             = Unhave,
-    Rolled             = Rolled,
-    Unroll             = Unroll,
-    Clear              = Clear,
-    ScoreSources       = ScoreSources,
-    GetSlotWeights     = GetSlotWeights,
-    GetPlayerTracking  = GetPlayerTracking,
-    GetSavingValue     = GetSavingValue,
+    HandleCommand              = HandleCommand,
+    PrintHelp                  = PrintHelp,
+    PrintRanking               = PrintRanking,
+    PrintStatus                = PrintStatus,
+    Have                       = Have,
+    Unhave                     = Unhave,
+    Rolled                     = Rolled,
+    Unroll                     = Unroll,
+    Clear                      = Clear,
+    ScoreSources               = ScoreSources,
+    GetBoardData               = GetBoardData,
+    GetSlotWeights             = GetSlotWeights,
+    GetPlayerTracking          = GetPlayerTracking,
+    GetSavingValue             = GetSavingValue,
+    SaveToTier                 = SaveToTier,
+    FormatSaveText             = FormatSaveText,
+    COLUMN_HEADER_TIPS         = COLUMN_HEADER_TIPS,
+    ShowColumnHeaderTooltip    = ShowColumnHeaderTooltip,
     --- Assign function(playerName) -> { owned, rolled } | nil when addon comms exist.
-    GetRemoteTracking  = nil,
+    GetRemoteTracking          = nil,
 }

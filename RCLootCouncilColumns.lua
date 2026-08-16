@@ -41,15 +41,6 @@ local TIER_QUALITY = {
     D   = 1,
 }
 
-local SAVE_QUALITY_THRESHOLDS = {
-    { min = 20, quality = 6 },
-    { min = 14, quality = 5 },
-    { min = 9,  quality = 4 },
-    { min = 6,  quality = 3 },
-    { min = 3,  quality = 2 },
-    { min = 0,  quality = 1 },
-}
-
 local function qualityColor(quality)
     quality = quality or 0
     if GetItemQualityColor then
@@ -78,18 +69,6 @@ local function parseTierName(value)
         or value:match("^([SABCD])%(")
 end
 
-local function saveQuality(score)
-    if type(score) ~= "number" then
-        return 0
-    end
-    for _, row in ipairs(SAVE_QUALITY_THRESHOLDS) do
-        if score >= row.min then
-            return row.quality
-        end
-    end
-    return 0
-end
-
 -- =============================================================================
 -- ABSTRACT BASE CLASS: BlingtronApp.Column
 -- =============================================================================
@@ -106,16 +85,18 @@ BlingtronApp.Column = Column
 --- @param target   string|number? Column name or index to place relative to. nil = append.
 --- @param position "before"|"after"? Relative placement when target is a column name.
 --- @param align    string? Text alignment: "LEFT" (default), "CENTER", "RIGHT"
+--- @param headerTipKey string? BonusRoll.COLUMN_HEADER_TIPS key shown on header hover
 --- @return table           New column class (override GetValue, GetColor, GetTooltip)
-function Column:Extend(colName, header, width, target, position, align)
+function Column:Extend(colName, header, width, target, position, align, headerTipKey)
     local cls = setmetatable({}, { __index = self })
     cls.__index = cls
-    cls.colName  = colName
-    cls.header   = logo .. " " .. header
-    cls.width    = width
-    cls.target   = target
-    cls.position = position
-    cls.align    = align
+    cls.colName       = colName
+    cls.header        = logo .. " " .. header
+    cls.width         = width
+    cls.target        = target
+    cls.position      = position
+    cls.align         = align
+    cls.headerTipKey  = headerTipKey
     tinsert(BlingtronApp.RCColumns, cls)
     return cls
 end
@@ -230,7 +211,7 @@ local function formatBisColumnText(tier, pct)
     return tier
 end
 
-local BisColumn = Column:Extend("blingtron_bis", "Tier", 80, "gear1", "before")
+local BisColumn = Column:Extend("blingtron_bis", "Tier", 80, "gear1", "before", nil, "tier")
 
 --- Resolution order (mutually exclusive tiers):
 --- 1) Custom player BIS — if this player has any CSV rows, ONLY that list applies (no spec/source lists).
@@ -289,7 +270,7 @@ end
 -- COLUMN: Bonus-roll save
 -- =============================================================================
 
-local SavingColumn = Column:Extend("blingtron_brsave", "BR Save", 58, "blingtron_bis", "after", "CENTER")
+local SavingColumn = Column:Extend("blingtron_brsave", "BR Save", 80, "blingtron_bis", "after", "CENTER", "brSave")
 
 function SavingColumn:GetValue(name, itemID, specID)
     if not itemID or not specID or not BlingtronApp.BonusRoll then
@@ -300,11 +281,13 @@ function SavingColumn:GetValue(name, itemID, specID)
     if not result then
         return nil
     end
-    return string.format("%.1f", result.saving), result.saving
+    local text = BlingtronApp.BonusRoll.FormatSaveText(result.saving)
+    return text or string.format("%.1f", result.saving), result.saving
 end
 
 function SavingColumn:GetColor(value)
-    return qualityColor(saveQuality(tonumber(value)))
+    local tier = parseTierName(value)
+    return qualityColor(TIER_QUALITY[tier] or 0)
 end
 
 function SavingColumn:GetTooltip(value, name, itemID, specID)

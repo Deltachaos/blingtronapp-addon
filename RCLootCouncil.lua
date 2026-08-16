@@ -27,6 +27,39 @@ BlingtronApp.RC = {
 -- VOTING FRAME MODULE
 -- =============================================================================
 
+function votingFrameModule:AttachColumnHeaderTooltips()
+    local st = RCVotingFrame.frame and RCVotingFrame.frame.st
+    if not st or not st.head or not st.head.cols then
+        return
+    end
+    for _, btn in ipairs(st.head.cols) do
+        if not btn.blingtronHeaderTipHooked then
+            btn.blingtronHeaderTipHooked = true
+            btn:HookScript("OnEnter", function(self)
+                local stNow = RCVotingFrame.frame and RCVotingFrame.frame.st
+                if not stNow or not stNow.head or not stNow.cols then
+                    return
+                end
+                local colIndex
+                for j, colBtn in ipairs(stNow.head.cols) do
+                    if colBtn == self then
+                        colIndex = j
+                        break
+                    end
+                end
+                local spec = colIndex and stNow.cols[colIndex]
+                local key = spec and spec.headerTipKey
+                if key and BlingtronApp.BonusRoll and BlingtronApp.BonusRoll.ShowColumnHeaderTooltip then
+                    BlingtronApp.BonusRoll.ShowColumnHeaderTooltip(self, key)
+                end
+            end)
+            btn:HookScript("OnLeave", function()
+                addon:HideTooltip()
+            end)
+        end
+    end
+end
+
 function votingFrameModule:OnInitialize()
     if not RCVotingFrame.scrollCols then
         return self:ScheduleTimer("OnInitialize", 0.5)
@@ -36,6 +69,8 @@ function votingFrameModule:OnInitialize()
     end
 
     self:RegisterMessage("RCSessionChangedPre", "OnSessionChanged")
+    self:SecureHook(RCVotingFrame, "GetFrame", "AttachColumnHeaderTooltips")
+    self:SecureHook(RCVotingFrame, "RefreshColumnLayout", "AttachColumnHeaderTooltips")
 
     for _, col in ipairs(BlingtronApp.RCColumns) do
         if not RCVotingFrame:GetColumn(col.colName) then
@@ -46,9 +81,12 @@ function votingFrameModule:OnInitialize()
                 width        = col.width,
                 align        = col.align,
                 sortnext     = col.sortnext,
+                headerTipKey = col.headerTipKey,
             }, col.target, col.position)
         end
     end
+
+    self:AttachColumnHeaderTooltips()
 end
 
 function votingFrameModule:OnSessionChanged(msg, newSession)

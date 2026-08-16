@@ -665,7 +665,7 @@ local function CreateMainMenuFrame()
     if mainMenuFrame then return end
 
     mainMenuFrame = CreateFrame("Frame", "BlingtronAppMainMenuFrame", UIParent, "BasicFrameTemplateWithInset")
-    mainMenuFrame:SetSize(360, 520)
+    mainMenuFrame:SetSize(360, 556)
     mainMenuFrame:SetPoint("CENTER")
     mainMenuFrame:SetMovable(true)
     mainMenuFrame:EnableMouse(true)
@@ -738,9 +738,18 @@ local function CreateMainMenuFrame()
         BlingtronApp:ToggleGuildNoteSync()
     end)
 
+    local bonusRollBtn = CreateFrame("Button", nil, mainMenuFrame, "UIPanelButtonTemplate")
+    bonusRollBtn:SetSize(310, 30)
+    bonusRollBtn:SetPoint("TOPLEFT", guildNoteSyncBtn, "BOTTOMLEFT", 0, -8)
+    bonusRollBtn:SetText("Bonus Rolls")
+    bonusRollBtn:SetScript("OnClick", function()
+        mainMenuFrame:Hide()
+        BlingtronApp:ToggleBonusRollFrame()
+    end)
+
     -- Settings section
     local settingsLabel = mainMenuFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    settingsLabel:SetPoint("TOPLEFT", guildNoteSyncBtn, "BOTTOMLEFT", 0, -20)
+    settingsLabel:SetPoint("TOPLEFT", bonusRollBtn, "BOTTOMLEFT", 0, -20)
     settingsLabel:SetText("Settings")
 
     -- BiS Source label
