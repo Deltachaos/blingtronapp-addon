@@ -42,8 +42,10 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Using version $VERSION"
 
-      - name: Build BiS lists and stamp TOC version
-        run: python scripts/build_bis_lists.py --version "${{ steps.version.outputs.VERSION }}"
+      - name: Build BiS lists, loot pools, and stamp TOC version
+        run: |
+          python scripts/build_bis_lists.py --version "${{ steps.version.outputs.VERSION }}"
+          python scripts/build_loot_pools.py
 
       - name: Use dated version for packager
         run: |

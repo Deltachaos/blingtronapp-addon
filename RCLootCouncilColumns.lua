@@ -21,6 +21,75 @@ local lookupByName        = BlingtronApp.Helpers.lookupByName
 local normalizeKey        = BlingtronApp.Helpers.normalizeKey
 local logo                = BlingtronApp.logoIconSmall
 
+-- WoW item-quality colors: gold, orange, purple, blue, green, white, gray
+local QUALITY_FALLBACK = {
+    [0] = { 0.62, 0.62, 0.62 },
+    [1] = { 1.00, 1.00, 1.00 },
+    [2] = { 0.12, 1.00, 0.00 },
+    [3] = { 0.00, 0.44, 0.87 },
+    [4] = { 0.64, 0.21, 0.93 },
+    [5] = { 1.00, 0.50, 0.00 },
+    [6] = { 0.90, 0.80, 0.50 },
+}
+
+local TIER_QUALITY = {
+    BiS = 6,
+    S   = 5,
+    A   = 4,
+    B   = 3,
+    C   = 2,
+    D   = 1,
+}
+
+local SAVE_QUALITY_THRESHOLDS = {
+    { min = 20, quality = 6 },
+    { min = 14, quality = 5 },
+    { min = 9,  quality = 4 },
+    { min = 6,  quality = 3 },
+    { min = 3,  quality = 2 },
+    { min = 0,  quality = 1 },
+}
+
+local function qualityColor(quality)
+    quality = quality or 0
+    if GetItemQualityColor then
+        local r, g, b = GetItemQualityColor(quality)
+        if r then
+            return r, g, b
+        end
+    end
+    local colors = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+    if colors then
+        return colors.r, colors.g, colors.b
+    end
+    local fb = QUALITY_FALLBACK[quality] or QUALITY_FALLBACK[0]
+    return fb[1], fb[2], fb[3]
+end
+
+local function parseTierName(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    if value:find("^BiS") or value:lower() == "bis" then
+        return "BiS"
+    end
+    return value:match("^([SABCD])$")
+        or value:match("^([SABCD])%s")
+        or value:match("^([SABCD])%(")
+end
+
+local function saveQuality(score)
+    if type(score) ~= "number" then
+        return 0
+    end
+    for _, row in ipairs(SAVE_QUALITY_THRESHOLDS) do
+        if score >= row.min then
+            return row.quality
+        end
+    end
+    return 0
+end
+
 -- =============================================================================
 -- ABSTRACT BASE CLASS: BlingtronApp.Column
 -- =============================================================================
@@ -52,10 +121,11 @@ function Column:Extend(colName, header, width, target, position, align)
 end
 
 --- Override: return display text for a cell, or nil for "-".
+--- Optional second return is the sort value (defaults to the display text).
 --- @param name   string  Candidate name (e.g. "Player-Realm")
 --- @param itemID number? Current loot item ID
 --- @param specID number? Candidate's specialization ID
---- @return string?
+--- @return string?, any?
 function Column:GetValue(name, itemID, specID)
     return nil
 end
@@ -65,14 +135,17 @@ end
 --- @param value string  The value returned by GetValue
 --- @return number, number, number
 function Column:GetColor(value)
-    return 0.8, 0.8, 0.8
+    return qualityColor(0)
 end
 
 --- Override: return tooltip title and body text.
 --- Only called when GetValue returned a non-nil value. Return nil to skip tooltip.
 --- @param value string
+--- @param name string?
+--- @param itemID number?
+--- @param specID number?
 --- @return string?, string?
-function Column:GetTooltip(value)
+function Column:GetTooltip(value, name, itemID, specID)
     return nil, nil
 end
 
@@ -83,7 +156,7 @@ function Column:MakeCellUpdate()
         local name = data[realrow].name
         frame.text:SetText("-")
         data[realrow].cols[column].value = "-"
-        frame.text:SetTextColor(0.8, 0.8, 0.8)
+        frame.text:SetTextColor(qualityColor(0))
         frame:SetScript("OnEnter", nil)
         frame:SetScript("OnLeave", nil)
 
@@ -98,14 +171,14 @@ function Column:MakeCellUpdate()
         if specID and specID <= 0 then
             specID = nil
         end
-        local value = col:GetValue(name, itemID, specID)
+        local value, sortValue = col:GetValue(name, itemID, specID)
         if not value then return end
 
         frame.text:SetText(value)
-        data[realrow].cols[column].value = value
+        data[realrow].cols[column].value = sortValue ~= nil and sortValue or value
         frame.text:SetTextColor(col:GetColor(value))
 
-        local tipTitle, tipBody = col:GetTooltip(value)
+        local tipTitle, tipBody = col:GetTooltip(value, name, itemID, specID)
         if tipTitle then
             frame:SetScript("OnEnter", function()
                 addon:CreateTooltip(tipTitle, tipBody)
@@ -199,12 +272,66 @@ function BisColumn:GetValue(name, itemID, specID)
     return formatBisColumnText(tier, pct)
 end
 
+function BisColumn:GetColor(value)
+    local tier = parseTierName(value)
+    return qualityColor(TIER_QUALITY[tier] or 0)
+end
+
 function BisColumn:GetTooltip(value)
     if type(value) == "string" and value:find("^BiS") then
         return "BiS / Trinket tier", "Best in slot for this spec."
     end
     -- Tier letters (A/B/…) or custom CSV note text
     return "BiS / Trinket tier", value
+end
+
+-- =============================================================================
+-- COLUMN: Bonus-roll save
+-- =============================================================================
+
+local SavingColumn = Column:Extend("blingtron_brsave", "BR Save", 58, "blingtron_bis", "after", "CENTER")
+
+function SavingColumn:GetValue(name, itemID, specID)
+    if not itemID or not specID or not BlingtronApp.BonusRoll then
+        return nil
+    end
+    local tracking = BlingtronApp.BonusRoll.GetPlayerTracking(name)
+    local result = BlingtronApp.BonusRoll.GetSavingValue(specID, itemID, tracking)
+    if not result then
+        return nil
+    end
+    return string.format("%.1f", result.saving), result.saving
+end
+
+function SavingColumn:GetColor(value)
+    return qualityColor(saveQuality(tonumber(value)))
+end
+
+function SavingColumn:GetTooltip(value, name, itemID, specID)
+    local result
+    if itemID and specID and BlingtronApp.BonusRoll then
+        local tracking = BlingtronApp.BonusRoll.GetPlayerTracking(name)
+        result = BlingtronApp.BonusRoll.GetSavingValue(specID, itemID, tracking)
+    end
+    if not result then
+        return "Bonus-roll save", "Value of giving this as regular loot so they can spend bonus rolls on higher-value targets."
+    end
+    local source = result.source
+    local where = source.name
+    if source.raidName then
+        where = source.name .. " (" .. source.raidName .. ")"
+    elseif source.kind == "mythic_plus" then
+        where = source.name .. " (M+)"
+    end
+    local body = string.format(
+        "Weight %d on %s (bonus-roll EV %.1f, %d remaining). Save %.1f = weight / source EV. Higher means this source is a worse bonus-roll target, so getting the item as regular loot avoids wasting rolls on junk.",
+        result.weight,
+        where,
+        result.sourceScore,
+        result.remaining,
+        result.saving
+    )
+    return "Bonus-roll save", body
 end
 
 -- =============================================================================

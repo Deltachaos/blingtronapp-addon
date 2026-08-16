@@ -906,8 +906,22 @@ end
 
 SLASH_BLINGTRONAPP1 = "/blingtron"
 SLASH_BLINGTRONAPP2 = "/blingtronapp"
-SlashCmdList["BLINGTRONAPP"] = function()
-    BlingtronApp:ToggleMainMenu()
+SlashCmdList["BLINGTRONAPP"] = function(msg)
+    msg = strtrim(msg or "")
+    if msg == "" then
+        BlingtronApp:ToggleMainMenu()
+        return
+    end
+
+    local cmd, rest = msg:match("^(%S+)%s*(.*)$")
+    cmd = string.lower(cmd or "")
+    rest = rest or ""
+    if BlingtronApp.BonusRoll and BlingtronApp.BonusRoll.HandleCommand(cmd, rest) then
+        return
+    end
+    if BlingtronApp.BonusRoll then
+        BlingtronApp.BonusRoll.PrintHelp()
+    end
 end
 
 -- =============================================================================
@@ -926,6 +940,7 @@ initFrame:SetScript("OnEvent", function(_, _, addonName)
     end
     BlingtronAppDB.customPlayerBis = BlingtronAppDB.customPlayerBis or {}
     BlingtronAppDB.customSpecBis = BlingtronAppDB.customSpecBis or {}
+    BlingtronAppDB.bonusRoll = BlingtronAppDB.bonusRoll or {}
 
     RebuildCustomSpecBisSourcesFromDB()
 

@@ -15,6 +15,9 @@ BlingtronApp.BisListSources = BlingtronApp.BisListSources or {}
 --- [sourceId] -> { [specID] -> { [itemID] = { pct = n, slot = "...", source = { type = "raid"|"mythic_plus", id = n }? } } }
 BlingtronApp.BisList = BlingtronApp.BisList or {}
 
+--- Current-season raid/dungeon loot pools. Populated by Data/LootPools.lua.
+BlingtronApp.LootPools = BlingtronApp.LootPools or { raids = {}, dungeons = {} }
+
 --- First matching row wins (highest min first). Slot-max items are always "BiS".
 BlingtronApp.BIS_TIER_THRESHOLDS = {
     { min = 70, tier = "S" },
