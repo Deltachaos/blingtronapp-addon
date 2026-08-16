@@ -80,12 +80,7 @@ local mainMenuFrame = nil
 local sourceDropdown = nil
 
 local function BuildSortedSources()
-    local keys = {}
-    for k in pairs(BlingtronApp.BisListSources) do
-        tinsert(keys, k)
-    end
-    table.sort(keys)
-    return keys
+    return BlingtronApp.Helpers.getSortedBisListSourceKeys()
 end
 
 local function trim(str)
@@ -357,6 +352,7 @@ local function RebuildCustomSpecBisSourcesFromDB()
                 BlingtronApp.BisListSources[sourceKey] = {
                     label = GetSpecEditorDropdownLabel(specID),
                     id = sourceKey,
+                    order = 1000,
                 }
                 BlingtronApp.BisList[sourceKey] = { [specID] = normalizedItems }
             end
@@ -496,6 +492,27 @@ local specEditorTextArea = nil
 local specEditorStatusText = nil
 local specEditorSelectedSpecID = nil
 
+StaticPopupDialogs["BLINGTRONAPP_DELETE_ALL_SPEC_BIS"] = {
+    text = "Delete custom BiS for ALL specs? This cannot be undone.",
+    button1 = YES,
+    button2 = NO,
+    OnAccept = function()
+        BlingtronAppDB.customSpecBis = {}
+        RebuildCustomSpecBisSourcesFromDB()
+        RefreshBisSourceDropdown()
+        if specEditorTextArea then
+            specEditorTextArea:SetText("")
+        end
+        if specEditorStatusText then
+            specEditorStatusText:SetText("|cff00ff00Deleted all specs|r")
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
 local function SpecEditorLoadCurrentSpecIntoTextarea()
     if not specEditorTextArea or not specEditorSelectedSpecID then return end
     BlingtronAppDB.customSpecBis = BlingtronAppDB.customSpecBis or {}
@@ -611,9 +628,17 @@ function BlingtronApp:ShowCustomSpecBisEditor()
             end
         end)
 
+        local deleteAllBtn = CreateFrame("Button", nil, specEditorFrame, "UIPanelButtonTemplate")
+        deleteAllBtn:SetSize(140, 30)
+        deleteAllBtn:SetPoint("RIGHT", saveBtn, "LEFT", -8, 0)
+        deleteAllBtn:SetText("Delete All Specs")
+        deleteAllBtn:SetScript("OnClick", function()
+            StaticPopup_Show("BLINGTRONAPP_DELETE_ALL_SPEC_BIS")
+        end)
+
         specEditorStatusText = specEditorFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         specEditorStatusText:SetPoint("BOTTOMLEFT", specEditorFrame, "BOTTOMLEFT", 20, 24)
-        specEditorStatusText:SetWidth(specEditorFrame:GetWidth() - 100)
+        specEditorStatusText:SetWidth(specEditorFrame:GetWidth() - 340)
         specEditorStatusText:SetJustifyH("LEFT")
         specEditorStatusText:SetText("")
     end
@@ -669,7 +694,7 @@ local function CreateMainMenuFrame()
     promoText2:SetPoint("TOPLEFT", promoText1, "BOTTOMLEFT", 0, -6)
     promoText2:SetWidth(320)
     promoText2:SetJustifyH("LEFT")
-    promoText2:SetText("· Discord reminders (great vault, crest caps, tier progress)\n· Droptimizer wishlist syncing via browser extension\n· Raid lockout checks\n· Warcraft Logs attendance and performance tools.")
+    promoText2:SetText("· Discord reminders (great Vault, crest caps, tier progress)\n· Droptimizer wishlist syncing via browser extension\n· Raid lockout checks\n· Warcraft Logs attendance and performance tools.")
 
     local promoText3 = mainMenuFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     promoText3:SetPoint("TOPLEFT", promoText2, "BOTTOMLEFT", 0, -6)
@@ -896,7 +921,9 @@ initFrame:SetScript("OnEvent", function(_, _, addonName)
 
     BlingtronAppDB = BlingtronAppDB or {}
     BlingtronAppDB.minimapAngle = BlingtronAppDB.minimapAngle or 220
-    BlingtronAppDB.bisListSource = BlingtronAppDB.bisListSource or "wowhead_overall"
+    if not BlingtronAppDB.bisListSource or BlingtronAppDB.bisListSource == "wowhead_overall" then
+        BlingtronAppDB.bisListSource = "blingtron_overall"
+    end
     BlingtronAppDB.customPlayerBis = BlingtronAppDB.customPlayerBis or {}
     BlingtronAppDB.customSpecBis = BlingtronAppDB.customSpecBis or {}
 

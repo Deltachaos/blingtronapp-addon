@@ -126,10 +126,17 @@ end
 -- COPY DIALOG
 -- =============================================================================
 
+-- Do not touch CommunitiesFrame / memberInfo / OpenGuildMemberDetailFrame /
+-- Button:Click() from addon code. Reading Blizzard's roster memberInfo taints
+-- the GUID used by SET_GUILD_COMMUNITIY_NOTE, so Accept → SetNote() is blocked
+-- (ADDON_ACTION_FORBIDDEN) even when the player clicks Accept themselves.
+-- The player must open the guild roster and click the member with a real mouse
+-- click, then paste into Blizzard's note box.
+
 local function ShowCopyDialog(titleSuffix, textToCopy)
     if not copyDialogFrame then
         copyDialogFrame = CreateFrame("Frame", "BlingtronAppCopyDialog", UIParent, "BasicFrameTemplateWithInset")
-        copyDialogFrame:SetSize(480, 120)
+        copyDialogFrame:SetSize(480, 135)
         copyDialogFrame:SetPoint("CENTER")
         copyDialogFrame:SetMovable(true)
         copyDialogFrame:EnableMouse(true)
@@ -166,7 +173,9 @@ local function ShowCopyDialog(titleSuffix, textToCopy)
 
         local hintText = copyDialogFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         hintText:SetPoint("BOTTOM", copyDialogFrame, "BOTTOM", 0, 42)
-        hintText:SetText("Closes automatically on CTRL-C")
+        hintText:SetWidth(440)
+        hintText:SetWordWrap(true)
+        hintText:SetText("CTRL-C copies & closes. Open the guild roster yourself, click the member, then paste into Blizzard's note box.")
         hintText:SetTextColor(0.7, 0.7, 0.7)
 
         local closeBtn = CreateFrame("Button", nil, copyDialogFrame, "UIPanelButtonTemplate")
@@ -343,7 +352,16 @@ UpdateDiffList = function(diffs)
 
             row:SetHeight(rowH)
 
-            local textToCopy = d.officerDesired or d.publicDesired or ""
+            local textToCopy
+            if officerChecked and d.officerDesired ~= d.officerCurrent then
+                textToCopy = d.officerDesired or ""
+            elseif publicChecked and d.publicDesired ~= d.publicCurrent then
+                textToCopy = d.publicDesired or ""
+            else
+                textToCopy = (officerChecked and d.officerDesired)
+                    or (publicChecked and d.publicDesired)
+                    or ""
+            end
             local copyBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
             copyBtn:SetSize(50, 22)
             copyBtn:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, 0)

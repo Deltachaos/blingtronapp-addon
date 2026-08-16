@@ -1,6 +1,6 @@
 --[[
     BlingtronApp - RCLootCouncil integration
-    Adds custom columns to the RCLootCouncil voting frame.
+    Registers custom columns on the RCLootCouncil voting frame via RCVotingFrame:AddColumn.
     Column definitions live in RCLootCouncilColumns.lua.
 ]]
 
@@ -12,7 +12,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local RCVotingFrame = addon:GetModule("RCVotingFrame")
 
 local RCBlingtronApp = addon:NewModule("RCBlingtronApp", "AceHook-3.0", "AceTimer-3.0")
-local votingFrameModule = RCBlingtronApp:NewModule("BlingtronVotingFrame", "AceHook-3.0", "AceEvent-3.0")
+local votingFrameModule = RCBlingtronApp:NewModule("BlingtronVotingFrame", "AceHook-3.0", "AceEvent-3.0", "AceTimer-3.0")
 
 -- =============================================================================
 -- SHARED STATE (consumed by RCLootCouncilColumns.lua)
@@ -31,58 +31,29 @@ function votingFrameModule:OnInitialize()
     if not RCVotingFrame.scrollCols then
         return self:ScheduleTimer("OnInitialize", 0.5)
     end
+    if not RCVotingFrame.AddColumn then
+        return
+    end
 
     self:RegisterMessage("RCSessionChangedPre", "OnSessionChanged")
 
-    self.sortnext = {}
-    for _, v in ipairs(RCVotingFrame.scrollCols) do
-        if v.sortnext then
-            self.sortnext[v.colName] = RCVotingFrame.scrollCols[v.sortnext].colName
-        end
-    end
-
     for _, col in ipairs(BlingtronApp.RCColumns) do
-        local colDef = {
-            name         = col.header,
-            DoCellUpdate = col:MakeCellUpdate(),
-            colName      = col.colName,
-            width        = col.width,
-            align        = col.align,
-        }
-        if col.insertAt then
-            tinsert(RCVotingFrame.scrollCols, col.insertAt, colDef)
-        else
-            tinsert(RCVotingFrame.scrollCols, colDef)
+        if not RCVotingFrame:GetColumn(col.colName) then
+            RCVotingFrame:AddColumn({
+                name         = col.header,
+                DoCellUpdate = col:MakeCellUpdate(),
+                colName      = col.colName,
+                width        = col.width,
+                align        = col.align,
+                sortnext     = col.sortnext,
+            }, col.target, col.position)
         end
     end
-
-    self:UpdateSortNext()
 end
 
 function votingFrameModule:OnSessionChanged(msg, newSession)
     if msg == "RCSessionChangedPre" then
         self.session = newSession
-    end
-end
-
-function votingFrameModule:UpdateSortNext()
-    for index in ipairs(RCVotingFrame.scrollCols) do
-        if RCVotingFrame.scrollCols[index].sortnext then
-            local colName = RCVotingFrame.scrollCols[index].colName
-            local nextName = self.sortnext[colName]
-            if nextName and RCVotingFrame.GetColumnIndexFromName then
-                local exists = RCVotingFrame:GetColumnIndexFromName(nextName)
-                if exists then
-                    RCVotingFrame.scrollCols[index].sortnext = exists
-                end
-            end
-        end
-    end
-
-    -- Never GetFrame() here: early call duplicates the VF and breaks RC tooltips.
-    local vf = RCVotingFrame.frame
-    if vf and vf.st and vf.st.UpdateSt then
-        vf.st:UpdateSt()
     end
 end
 

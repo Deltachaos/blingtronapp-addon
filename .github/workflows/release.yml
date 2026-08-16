@@ -4,34 +4,34 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Extract tag name
-        id: tag
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-      - name: Extract version from tag
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Determine version
         id: version
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          # Remove 'v' prefix if present
-          VERSION=${TAG_NAME#v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-      
-      - name: Update version in .toc file
-        run: |
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          # Update the Version line in BlingtronApp.toc
-          sed -i "s/^## Version:.*/## Version: $VERSION/" BlingtronApp.toc
+          BASE=$(awk '/^## Version:/{ print $3; exit }' BlingtronApp.toc | sed -E 's/-[0-9]{12}$//')
+          VERSION="${BASE}-$(date -u +%Y%m%d%H%M)"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build BiS lists and stamp TOC version
+        run: python scripts/build_bis_lists.py --version "${{ steps.version.outputs.VERSION }}"
 
       - name: Create Package
         uses: BigWigsMods/packager@master

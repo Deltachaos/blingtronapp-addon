@@ -3,17 +3,19 @@
     Contains the abstract base class BlingtronApp.Column and all concrete column subclasses.
 
     To add a new column, create a subclass of BlingtronApp.Column:
-        local MyCol = BlingtronApp.Column:Extend("blingtron_mycol", "Header", 50, "CENTER")
+        local MyCol = BlingtronApp.Column:Extend("blingtron_mycol", "Header", 50, "gear1", "before", "CENTER")
         function MyCol:GetValue(name, itemID, specID) return "hello" end
         function MyCol:GetColor(value) return 1, 1, 0 end
         function MyCol:GetTooltip(value) return "Title", "Body" end
 ]]
 
-if not BlingtronApp or not BlingtronApp.RC then return end
+-- BlingtronApp.RC is always initialized as {} in Constants.lua; only load
+-- columns when RCLootCouncil.lua successfully wired up the integration.
+if not BlingtronApp or not BlingtronApp.RC or not BlingtronApp.RC.addon then return end
 
-local Player              = RCLootCouncil.Require "Data.Player"
 local RC                  = BlingtronApp.RC
 local addon               = RC.addon
+local Player              = addon.Require "Data.Player"
 local RCVotingFrame       = RC.RCVotingFrame
 local lookupByName        = BlingtronApp.Helpers.lookupByName
 local normalizeKey        = BlingtronApp.Helpers.normalizeKey
@@ -28,19 +30,22 @@ Column.__index = Column
 BlingtronApp.Column = Column
 
 --- Create a new column subclass. The header is automatically prefixed with the logo.
+--- Placement is passed through to RCVotingFrame:AddColumn(spec, target, position).
 --- @param colName  string  Unique internal name (e.g. "blingtron_bis")
 --- @param header   string  Column header text shown in the table
 --- @param width    number  Column width in pixels
---- @param insertAt number? Position to insert at (1-based). nil = append at end.
+--- @param target   string|number? Column name or index to place relative to. nil = append.
+--- @param position "before"|"after"? Relative placement when target is a column name.
 --- @param align    string? Text alignment: "LEFT" (default), "CENTER", "RIGHT"
 --- @return table           New column class (override GetValue, GetColor, GetTooltip)
-function Column:Extend(colName, header, width, insertAt, align)
+function Column:Extend(colName, header, width, target, position, align)
     local cls = setmetatable({}, { __index = self })
     cls.__index = cls
     cls.colName  = colName
     cls.header   = logo .. " " .. header
     cls.width    = width
-    cls.insertAt = insertAt
+    cls.target   = target
+    cls.position = position
     cls.align    = align
     tinsert(BlingtronApp.RCColumns, cls)
     return cls
@@ -142,12 +147,22 @@ local function getCustomSpecBisMap(specID)
     return t
 end
 
-local BisColumn = Column:Extend("blingtron_bis", "BiS", 50, 8)
+local function formatBisColumnText(tier, pct)
+    if not tier then
+        return nil
+    end
+    if type(pct) == "number" then
+        return string.format("%s (%d%%)", tier, math.floor(pct + 0.5))
+    end
+    return tier
+end
+
+local BisColumn = Column:Extend("blingtron_bis", "Tier", 80, "gear1", "before")
 
 --- Resolution order (mutually exclusive tiers):
 --- 1) Custom player BIS — if this player has any CSV rows, ONLY that list applies (no spec/source lists).
 --- 2) Custom spec BIS — if this spec has any saved rows, ONLY that list applies (not the selected source).
---- 3) Selected BiS list source (e.g. Wowhead).
+--- 3) Selected BiS list source (e.g. Wowhead). Wishlist rows always include recommendation %.
 function BisColumn:GetValue(name, itemID, specID)
     if not itemID then return nil end
 
@@ -180,14 +195,12 @@ function BisColumn:GetValue(name, itemID, specID)
 
     if not specID then return nil end
 
-    local bisList = BlingtronApp.Helpers.getBisList()
-    local entry = bisList[specID]
-    if not entry or next(entry) == nil then return nil end
-    return itemMapGet(entry, itemID)
+    local tier, pct = BlingtronApp.Helpers.getBisTier(specID, itemID)
+    return formatBisColumnText(tier, pct)
 end
 
 function BisColumn:GetTooltip(value)
-    if value == "BiS" then
+    if type(value) == "string" and value:find("^BiS") then
         return "BiS / Trinket tier", "Best in slot for this spec."
     end
     -- Tier letters (A/B/…) or custom CSV note text
@@ -198,7 +211,7 @@ end
 -- COLUMN: Performance
 -- =============================================================================
 
--- local PerfColumn = Column:Extend("blingtron_perf", "Perf", 40, 9, "CENTER")
+-- local PerfColumn = Column:Extend("blingtron_perf", "Perf", 40, "blingtron_bis", "after", "CENTER")
 
 -- function PerfColumn:GetValue(name)
 --     return lookupByName(BlingtronApp.Performance, name)

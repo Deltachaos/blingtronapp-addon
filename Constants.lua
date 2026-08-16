@@ -8,12 +8,21 @@ BlingtronApp.RC        = BlingtronApp.RC or {}
 BlingtronApp.RCColumns = BlingtronApp.RCColumns or {}
 
 --- Available BiS list sources. Populated by Data/BisList/*.lua files.
---- Each entry: key -> { label = "...", id = "..." }
+--- Each entry: key -> { label = "...", id = "...", order = n }
 BlingtronApp.BisListSources = BlingtronApp.BisListSources or {}
 
 --- BiS data container. Populated by Data/BisList/*.lua files.
---- [sourceId] -> { [itemID] -> { [specID] = "BiS" | "T1" | "T2" | "T3" } }
+--- [sourceId] -> { [specID] -> { [itemID] = { pct = n, slot = "...", source = { type = "raid"|"mythic_plus", id = n }? } } }
 BlingtronApp.BisList = BlingtronApp.BisList or {}
+
+--- First matching row wins (highest min first). Slot-max items are always "BiS".
+BlingtronApp.BIS_TIER_THRESHOLDS = {
+    { min = 70, tier = "S" },
+    { min = 50, tier = "A" },
+    { min = 30, tier = "B" },
+    { min = 15, tier = "C" },
+    { min = 0,  tier = "D" },
+}
 
 --- Performance ratings: "Name-Realm" -> "A"|"B"|"C"|"D"|"F"
 BlingtronApp.Performance = BlingtronApp.Performance or {}
@@ -103,58 +112,3 @@ BlingtronApp.ALL_CLASS_SPEC_IDS = {
     BlingtronApp.WARRIOR_FURY,
     BlingtronApp.WARRIOR_PROTECTION,
 }
-
-BlingtronApp.SET_HEAD = "head"
-BlingtronApp.SET_SHOULDERS = "shoulders"
-BlingtronApp.SET_CHEST = "chest"
-BlingtronApp.SET_LEGS = "legs"
-BlingtronApp.SET_HANDS = "hands"
-
-BlingtronApp.SET_ROUGE_MONK_DRUID_DEAMON_HUNTER = {
-    [BlingtronApp.SET_HEAD] = 249356,
-    [BlingtronApp.SET_SHOULDERS] = 249364,
-    [BlingtronApp.SET_CHEST] = 249348,
-    [BlingtronApp.SET_LEGS] = 249360,
-    [BlingtronApp.SET_HANDS] = 249352,
-}
-
-BlingtronApp.SET_ROGUE = BlingtronApp.SET_ROUGE_MONK_DRUID_DEAMON_HUNTER
-BlingtronApp.SET_MONK = BlingtronApp.SET_ROUGE_MONK_DRUID_DEAMON_HUNTER
-BlingtronApp.SET_DRUID = BlingtronApp.SET_ROUGE_MONK_DRUID_DEAMON_HUNTER
-BlingtronApp.SET_DEAMON_HUNTER = BlingtronApp.SET_ROUGE_MONK_DRUID_DEAMON_HUNTER
-
-BlingtronApp.SET_WARRIOR_PALADIN_DEATH_KNIGHT = {
-    [BlingtronApp.SET_HEAD] = 249358,
-    [BlingtronApp.SET_SHOULDERS] = 249366,
-    [BlingtronApp.SET_CHEST] = 249350,
-    [BlingtronApp.SET_LEGS] = 249362,
-    [BlingtronApp.SET_HANDS] = 249354,
-}
-
-BlingtronApp.SET_PALADIN = BlingtronApp.SET_WARRIOR_PALADIN_DEATH_KNIGHT
-BlingtronApp.SET_DEATH_KNIGHT = BlingtronApp.SET_WARRIOR_PALADIN_DEATH_KNIGHT
-BlingtronApp.SET_WARRIOR = BlingtronApp.SET_WARRIOR_PALADIN_DEATH_KNIGHT
-
-BlingtronApp.SET_PRIEST_MAGE_WARLOCK = {
-    [BlingtronApp.SET_HEAD] = 249355,
-    [BlingtronApp.SET_SHOULDERS] = 249363,
-    [BlingtronApp.SET_CHEST] = 249347,
-    [BlingtronApp.SET_LEGS] = 249359,
-    [BlingtronApp.SET_HANDS] = 249351,
-}
-
-BlingtronApp.SET_MAGE = BlingtronApp.SET_PRIEST_MAGE_WARLOCK
-BlingtronApp.SET_WARLOCK = BlingtronApp.SET_PRIEST_MAGE_WARLOCK
-BlingtronApp.SET_PRIEST = BlingtronApp.SET_PRIEST_MAGE_WARLOCK
-
-BlingtronApp.SET_HUNTER_SHAMAN_EVOKER = {
-    [BlingtronApp.SET_HEAD] = 249357,
-    [BlingtronApp.SET_SHOULDERS] = 249365,
-    [BlingtronApp.SET_CHEST] = 249349,
-    [BlingtronApp.SET_LEGS] = 249361,
-    [BlingtronApp.SET_HANDS] = 249353,
-}
-
-BlingtronApp.SET_SHAMAN = BlingtronApp.SET_HUNTER_SHAMAN_EVOKER
-BlingtronApp.SET_EVOKER = BlingtronApp.SET_HUNTER_SHAMAN_EVOKER
-BlingtronApp.SET_HUNTER = BlingtronApp.SET_HUNTER_SHAMAN_EVOKER
