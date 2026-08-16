@@ -57,6 +57,8 @@ minimapButton:RegisterForDrag("LeftButton")
 
 minimapButton:SetScript("OnClick", function(_, button)
     if button == "LeftButton" then
+        BlingtronApp:ToggleBonusRollFrame()
+    elseif button == "RightButton" then
         BlingtronApp:ToggleMainMenu()
     end
 end)
@@ -64,7 +66,8 @@ end)
 minimapButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:AddLine(logo .. " Blingtron.app")
-    GameTooltip:AddLine("|cffffffffLeft-click|r to open main menu", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("|cffffffffLeft-click|r to open bonus rolls", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("|cffffffffRight-click|r to open main menu", 0.8, 0.8, 0.8)
     GameTooltip:Show()
 end)
 
@@ -743,8 +746,7 @@ local function CreateMainMenuFrame()
     bonusRollBtn:SetPoint("TOPLEFT", guildNoteSyncBtn, "BOTTOMLEFT", 0, -8)
     bonusRollBtn:SetText("Bonus Rolls")
     bonusRollBtn:SetScript("OnClick", function()
-        mainMenuFrame:Hide()
-        BlingtronApp:ToggleBonusRollFrame()
+        BlingtronApp:ShowBonusRollFrame()
     end)
 
     -- Settings section
@@ -814,12 +816,26 @@ local function CreateMainMenuFrame()
     end)
 end
 
+function BlingtronApp:HideMainMenu()
+    if mainMenuFrame then
+        mainMenuFrame:Hide()
+    end
+end
+
+function BlingtronApp:ShowMainMenu()
+    CreateMainMenuFrame()
+    if BlingtronApp.HideBonusRollFrame then
+        BlingtronApp:HideBonusRollFrame()
+    end
+    mainMenuFrame:Show()
+end
+
 function BlingtronApp:ToggleMainMenu()
     CreateMainMenuFrame()
     if mainMenuFrame:IsShown() then
         mainMenuFrame:Hide()
     else
-        mainMenuFrame:Show()
+        self:ShowMainMenu()
     end
 end
 

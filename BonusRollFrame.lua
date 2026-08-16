@@ -372,11 +372,28 @@ local function CreateBoardFrame()
     title:SetPoint("TOP", frame, "TOP", 0, -5)
     title:SetText((BlingtronApp.logoIcon or "") .. " Bonus Rolls")
 
+    local optionsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    optionsBtn:SetSize(130, 22)
+    optionsBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -32)
+    optionsBtn:SetText("Options & Tools")
+    optionsBtn:SetScript("OnClick", function()
+        if BlingtronApp.ShowMainMenu then
+            BlingtronApp:ShowMainMenu()
+        end
+    end)
+
     subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    subtitle:SetPoint("TOP", title, "BOTTOM", 0, -2)
+    subtitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -34)
+    subtitle:SetPoint("RIGHT", optionsBtn, "LEFT", -8, 0)
+    subtitle:SetJustifyH("LEFT")
+    subtitle:SetJustifyV("MIDDLE")
+    subtitle:SetWordWrap(false)
+    if subtitle.SetMaxLines then
+        subtitle:SetMaxLines(1)
+    end
 
     scrollFrame = CreateFrame("ScrollFrame", "BlingtronAppBonusRollScroll", frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 12, -48)
+    scrollFrame:SetPoint("TOPLEFT", 12, -60)
     scrollFrame:SetPoint("BOTTOMRIGHT", -32, 28)
 
     scrollChild = CreateFrame("Frame", nil, scrollFrame)
@@ -391,12 +408,31 @@ local function CreateBoardFrame()
     frame:SetScript("OnShow", RefreshBoard)
 end
 
+function BlingtronApp:HideBonusRollFrame()
+    if frame then
+        frame:Hide()
+    end
+end
+
+function BlingtronApp:ShowBonusRollFrame()
+    CreateBoardFrame()
+    if BlingtronApp.HideMainMenu then
+        BlingtronApp:HideMainMenu()
+    end
+    if BlingtronApp.HideGuildNoteSync then
+        BlingtronApp:HideGuildNoteSync()
+    end
+    if not frame:IsShown() then
+        frame:Show()
+    end
+    RefreshBoard()
+end
+
 function BlingtronApp:ToggleBonusRollFrame()
     CreateBoardFrame()
     if frame:IsShown() then
         frame:Hide()
     else
-        frame:Show()
-        RefreshBoard()
+        self:ShowBonusRollFrame()
     end
 end

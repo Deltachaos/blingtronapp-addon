@@ -508,6 +508,18 @@ function BlingtronApp:ProcessCSV()
     statusText:SetText(string.format("|cff00ff00%d difference(s) – see list above|r", #diffs))
 end
 
+function BlingtronApp:HideGuildNoteSync()
+    if mainFrame then
+        mainFrame:Hide()
+    end
+    if diffFrame then
+        diffFrame:Hide()
+    end
+    if copyDialogFrame then
+        copyDialogFrame:Hide()
+    end
+end
+
 function BlingtronApp:ToggleGuildNoteSync()
     CreateUI()
     if mainFrame:IsShown() then
