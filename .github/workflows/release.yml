@@ -45,7 +45,8 @@ jobs:
       - name: Build BiS lists, loot pools, and stamp TOC version
         run: |
           python scripts/build_bis_lists.py --version "${{ steps.version.outputs.VERSION }}"
-          python scripts/build_loot_pools.py
+          ls -l Data
+          ls -l Data/BisList
 
       - name: Use dated version for packager
         run: |

@@ -16,6 +16,7 @@ BlingtronApp.BisListSources = BlingtronApp.BisListSources or {}
 BlingtronApp.BisList = BlingtronApp.BisList or {}
 
 --- Current-season raid/dungeon loot pools. Populated by Data/LootPools.lua.
+--- Each item may have lootSpecs = { [specID] = true } for bonus-roll eligibility.
 BlingtronApp.LootPools = BlingtronApp.LootPools or { raids = {}, dungeons = {} }
 
 --- First matching row wins (highest min first). Slot-max items are always "BiS".

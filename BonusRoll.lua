@@ -323,14 +323,42 @@ local function buildSlotWeights(specItems)
     return weights
 end
 
-local function scoreSource(source, weights, charDB)
+local function itemEligibleForSpec(item, specID)
+    if not item then
+        return false
+    end
+    local specs = item.lootSpecs
+    if type(specs) ~= "table" then
+        return true
+    end
+    specID = tonumber(specID) or specID
+    if not specID then
+        return true
+    end
+    return not not (specs[specID] or specs[tostring(specID)])
+end
+
+local function findSourceItem(source, itemID)
+    itemID = tonumber(itemID) or itemID
+    if not source or not itemID then
+        return nil
+    end
+    for _, item in ipairs(source.items or {}) do
+        if tonumber(item.id) == itemID then
+            return item
+        end
+    end
+    return nil
+end
+
+local function scoreSource(source, weights, charDB, specID)
     local rolled = charDB.rolled[source.key] or {}
     local remaining = 0
     local valueSum = 0
     local wanted = {}
 
     for _, item in ipairs(source.items) do
-        if not isTracked(rolled, item.id) then
+        if itemEligibleForSpec(item, specID) and not isTracked(rolled, item.id) then
             remaining = remaining + 1
             local weight = weights[item.id]
             if type(weight) == "number" and weight > 0 and not isTracked(charDB.owned, item.id) then
@@ -447,19 +475,22 @@ local function GetSavingValue(specID, itemID, tracking)
     local charDB = { owned = owned, rolled = rolledBySource }
     local best
     for _, source in ipairs(sources) do
-        local rolled = rolledBySource[source.key] or {}
-        if not isTracked(rolled, itemID) then
-            local scored = scoreSource(source, weights, charDB)
-            if scored.score > 0 then
-                local saving = weight / scored.score
-                if not best or saving > best.saving then
-                    best = {
-                        saving = saving,
-                        weight = weight,
-                        remaining = scored.remaining,
-                        sourceScore = scored.score,
-                        source = source,
-                    }
+        local srcItem = findSourceItem(source, itemID)
+        if srcItem and itemEligibleForSpec(srcItem, specID) then
+            local rolled = rolledBySource[source.key] or {}
+            if not isTracked(rolled, itemID) then
+                local scored = scoreSource(source, weights, charDB, specID)
+                if scored.score > 0 then
+                    local saving = weight / scored.score
+                    if not best or saving > best.saving then
+                        best = {
+                            saving = saving,
+                            weight = weight,
+                            remaining = scored.remaining,
+                            sourceScore = scored.score,
+                            source = source,
+                        }
+                    end
                 end
             end
         end
@@ -510,7 +541,7 @@ local function ScoreSources()
     local weights = GetSlotWeights(specID)
     local results = {}
     for _, source in ipairs(sourceList) do
-        results[#results + 1] = scoreSource(source, weights, charDB)
+        results[#results + 1] = scoreSource(source, weights, charDB, specID)
     end
     table.sort(results, function(a, b)
         if a.score ~= b.score then
@@ -571,35 +602,39 @@ local function GetBoardData()
     for _, scored in ipairs(results) do
         local rolled = charDB.rolled[scored.key] or {}
         local items = {}
+        local targetedIDs = {}
         local bestSaving
         for _, item in ipairs(scored.source.items) do
-            local weight = weights[item.id]
-            if type(weight) ~= "number" then
-                weight = 0
-            end
-            if weight > 0 then
-                local isRolled = isTracked(rolled, item.id) and true or false
-                local isOwned = isTracked(charDB.owned, item.id) and true or false
-                local saving
-                if not isOwned and not isRolled and scored.score > 0 then
-                    saving = weight / scored.score
-                    if not bestSaving or saving > bestSaving then
-                        bestSaving = saving
+            if itemEligibleForSpec(item, specID) then
+                local weight = weights[item.id]
+                if type(weight) ~= "number" then
+                    weight = 0
+                end
+                if weight > 0 then
+                    targetedIDs[item.id] = true
+                    local isRolled = isTracked(rolled, item.id) and true or false
+                    local isOwned = isTracked(charDB.owned, item.id) and true or false
+                    local saving
+                    if not isOwned and not isRolled and scored.score > 0 then
+                        saving = weight / scored.score
+                        if not bestSaving or saving > bestSaving then
+                            bestSaving = saving
+                        end
                     end
+                    local status = "open"
+                    if isRolled then
+                        status = "rolled"
+                    elseif isOwned then
+                        status = "loot"
+                    end
+                    items[#items + 1] = {
+                        id = item.id,
+                        name = item.name,
+                        weight = weight,
+                        saving = saving,
+                        status = status,
+                    }
                 end
-                local status = "open"
-                if isRolled then
-                    status = "rolled"
-                elseif isOwned then
-                    status = "loot"
-                end
-                items[#items + 1] = {
-                    id = item.id,
-                    name = item.name,
-                    weight = weight,
-                    saving = saving,
-                    status = status,
-                }
             end
         end
         table.sort(items, function(a, b)
@@ -615,8 +650,7 @@ local function GetBoardData()
         local extraItems = {}
         local extraCandidates = {}
         for _, item in ipairs(scored.source.items) do
-            local weight = weights[item.id]
-            if type(weight) ~= "number" or weight <= 0 then
+            if not targetedIDs[item.id] then
                 local entry = {
                     id = item.id,
                     name = item.name,
@@ -626,7 +660,7 @@ local function GetBoardData()
                 }
                 if isTracked(rolled, item.id) then
                     extraItems[#extraItems + 1] = entry
-                else
+                elseif itemEligibleForSpec(item, specID) then
                     extraCandidates[#extraCandidates + 1] = entry
                 end
             end

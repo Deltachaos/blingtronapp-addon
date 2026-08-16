@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Fetch BiS data from data.blingtron.app and write Data/BisList Lua files.
+"""Fetch BiS data and loot pools from data.blingtron.app.
 
-Also updates BlingtronApp.toc with the generated file list and optional version.
+Writes Data/BisList Lua files and Data/LootPools.lua, then updates
+BlingtronApp.toc with the generated file list and optional version.
 When an entry has source.type == "item", the token/source id is stored instead of
 the transformed item id (that is the item that actually drops). Token sources are
 flattened by fetching /gear/item/{id}.json so Lua only stores raid or mythic_plus.
@@ -34,6 +35,9 @@ SOURCE_IDS = ("wowhead", "archon", "icy-veins", "method")
 AGGREGATED_SOURCE = "blingtron"
 PERSISTABLE_SOURCE_TYPES = ("raid", "mythic_plus")
 SLOT_ALIASES = {"trinkets": "trinket"}
+TOKEN_FLAGS = ("token", "is_token", "tset", "is_tset", "tier_token")
+TOKEN_CREATED_KEYS = ("creates", "created_items", "token_items")
+LOOT_POOLS_TOC_LINE = "Data\\LootPools.lua"
 
 SOURCE_LABELS = {
     "blingtron": "All Average",
@@ -127,6 +131,7 @@ VERSION_LINE_RE = re.compile(r"^## Version:\s*(.+?)\s*$", re.M)
 ItemEntry = dict[str, Any]
 SpecItems = dict[int, ItemEntry]
 Tables = dict[tuple[str, str], dict[str, SpecItems]]
+LootSource = dict[str, Any]
 
 
 def source_key(source_id: str, activity: str) -> str:
@@ -444,6 +449,270 @@ def render_lua(source_id: str, activity: str, spec_items: dict[str, SpecItems]) 
     return "\n".join(lines)
 
 
+def bis_item_ids(tables: Tables) -> set[int]:
+    return {
+        item_id
+        for spec_items in tables.values()
+        for items in spec_items.values()
+        for item_id in items
+    }
+
+
+def is_tier_token(raw: dict[str, Any]) -> bool:
+    """Return whether a non-equippable item creates equippable tier gear."""
+    if any(raw.get(key) is True for key in TOKEN_FLAGS):
+        return True
+    for key in TOKEN_CREATED_KEYS:
+        created = raw.get(key)
+        if not isinstance(created, list):
+            continue
+        for entry in created:
+            if isinstance(entry, int):
+                return True
+            if isinstance(entry, dict) and (
+                entry.get("equippable") is True or isinstance(entry.get("id"), int)
+            ):
+                return True
+    return False
+
+
+def parse_loot_specs(raw: object) -> tuple[str, ...] | None:
+    if not isinstance(raw, list):
+        return None
+    wanted: set[tuple[str, str]] = set()
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        class_slug = entry.get("class")
+        spec_slug = entry.get("spec")
+        if isinstance(class_slug, str) and isinstance(spec_slug, str):
+            wanted.add((class_slug, spec_slug))
+    return tuple(const for key, const in SPEC_CONSTANTS.items() if key in wanted)
+
+
+def parse_loot_items(raw: object, wanted_item_ids: set[int]) -> list[LootSource]:
+    if not isinstance(raw, list):
+        return []
+    items: list[LootSource] = []
+    seen: set[int] = set()
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        item_id = entry.get("id")
+        if not isinstance(item_id, int) or item_id in seen:
+            continue
+        if (
+            entry.get("equippable") is False
+            and not is_tier_token(entry)
+            and item_id not in wanted_item_ids
+        ):
+            continue
+        name = entry.get("name")
+        item: LootSource = {
+            "id": item_id,
+            "name": name if isinstance(name, str) and name else str(item_id),
+        }
+        loot_specs = parse_loot_specs(entry.get("loot_specs"))
+        if loot_specs is not None:
+            item["lootSpecs"] = loot_specs
+        seen.add(item_id)
+        items.append(item)
+    items.sort(key=lambda item: item["id"])
+    return items
+
+
+def season_ids(season: dict, key: str, id_key: str) -> set[int]:
+    return {
+        entry[id_key]
+        for entry in season.get(key) or []
+        if isinstance(entry, dict) and isinstance(entry.get(id_key), int)
+    }
+
+
+def load_season_sources(api_base: str) -> tuple[list[LootSource], list[LootSource]]:
+    base = api_base.rstrip("/")
+    season = fetch_json(f"{base}/wow/season.json")
+    raw_raids = fetch_json(f"{base}/wow/raids.json")
+    raw_dungeons = fetch_json(f"{base}/wow/dungeons.json")
+    if not isinstance(season, dict):
+        raise SystemExit("season.json did not return an object")
+    if not isinstance(raw_raids, list):
+        raise SystemExit("raids.json did not return a list")
+    if not isinstance(raw_dungeons, list):
+        raise SystemExit("dungeons.json did not return a list")
+
+    wanted_raids = season_ids(season, "raids", "id")
+    wanted_dungeons = season_ids(season, "mythic_plus", "challenge_mode_id")
+    raids: list[LootSource] = []
+    for raw in raw_raids:
+        if not isinstance(raw, dict) or raw.get("id") not in wanted_raids:
+            continue
+        raid_id = raw.get("id")
+        name = raw.get("name")
+        if not isinstance(raid_id, int) or not isinstance(name, str):
+            continue
+        encounters = []
+        for encounter in raw.get("encounters") or []:
+            if not isinstance(encounter, dict):
+                continue
+            encounter_id = encounter.get("id")
+            encounter_name = encounter.get("name")
+            if isinstance(encounter_id, int) and isinstance(encounter_name, str):
+                encounters.append({"id": encounter_id, "name": encounter_name})
+        raids.append({"id": raid_id, "name": name, "encounters": encounters})
+
+    dungeons: list[LootSource] = []
+    for raw in raw_dungeons:
+        if not isinstance(raw, dict) or raw.get("challenge_mode_id") not in wanted_dungeons:
+            continue
+        dungeon_id = raw.get("id")
+        challenge_id = raw.get("challenge_mode_id")
+        name = raw.get("name")
+        if (
+            isinstance(dungeon_id, int)
+            and isinstance(challenge_id, int)
+            and isinstance(name, str)
+        ):
+            dungeons.append({
+                "id": dungeon_id,
+                "challengeModeId": challenge_id,
+                "name": name,
+            })
+    raids.sort(key=lambda raid: raid["id"])
+    dungeons.sort(key=lambda dungeon: dungeon["challengeModeId"])
+    return raids, dungeons
+
+
+def fetch_loot_pools(
+    api_base: str,
+    raids: list[LootSource],
+    dungeons: list[LootSource],
+    wanted_item_ids: set[int],
+) -> None:
+    base = api_base.rstrip("/")
+    jobs: list[tuple[str, str, LootSource]] = []
+    for raid in raids:
+        for encounter in raid["encounters"]:
+            jobs.append((
+                f"{base}/gear/source/raid/encounter/{encounter['id']}.json",
+                "raid",
+                encounter,
+            ))
+    for dungeon in dungeons:
+        jobs.append((
+            f"{base}/gear/source/mythic_plus/{dungeon['challengeModeId']}.json",
+            "dungeon",
+            dungeon,
+        ))
+    if not jobs:
+        raise SystemExit("No current-season raids or dungeons to fetch")
+
+    print(f"Fetching {len(jobs)} loot pools from {api_base}")
+    done = 0
+    skipped = 0
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        future_map = {
+            pool.submit(fetch_json, url): (kind, target)
+            for url, kind, target in jobs
+        }
+        for future in as_completed(future_map):
+            kind, target = future_map[future]
+            payload = future.result()
+            raw_items = payload.get("items") if isinstance(payload, dict) else None
+            raw_count = len(raw_items) if isinstance(raw_items, list) else 0
+            items = parse_loot_items(raw_items, wanted_item_ids)
+            skipped += raw_count - len(items)
+            if isinstance(payload, dict):
+                name = payload.get("name")
+                if isinstance(name, str) and name:
+                    target["name"] = name
+            target["items"] = items
+            done += 1
+            if done % 5 == 0 or done == len(jobs):
+                print(f"Fetched {done}/{len(jobs)} {kind} pools")
+    if skipped:
+        print(f"Excluded {skipped} non-equippable items (tset tokens kept)")
+
+
+def lua_string(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return '"' + escaped + '"'
+
+
+def collect_spec_sets(
+    raids: list[LootSource],
+    dungeons: list[LootSource],
+) -> list[tuple[str, ...]]:
+    seen: dict[tuple[str, ...], None] = {}
+    for raid in raids:
+        groups = [encounter.get("items") or [] for encounter in raid.get("encounters") or []]
+        for items in groups:
+            for item in items:
+                specs = item.get("lootSpecs")
+                if isinstance(specs, tuple):
+                    seen.setdefault(specs, None)
+    for dungeon in dungeons:
+        for item in dungeon.get("items") or []:
+            specs = item.get("lootSpecs")
+            if isinstance(specs, tuple):
+                seen.setdefault(specs, None)
+    return list(seen)
+
+
+def render_loot_items(
+    items: list[LootSource],
+    indent: str,
+    set_index: dict[tuple[str, ...], str],
+) -> list[str]:
+    lines = [f"{indent}items = {{"]
+    for item in items:
+        specs = item.get("lootSpecs")
+        extra = f", lootSpecs = {set_index[specs]}" if isinstance(specs, tuple) else ""
+        lines.append(
+            f"{indent}    {{ id = {item['id']}, name = {lua_string(item['name'])}{extra} }},"
+        )
+    lines.append(f"{indent}}},")
+    return lines
+
+
+def render_loot_lua(raids: list[LootSource], dungeons: list[LootSource]) -> str:
+    spec_sets = collect_spec_sets(raids, dungeons)
+    set_index = {specs: f"S{i}" for i, specs in enumerate(spec_sets, start=1)}
+    lines = [
+        "-- Auto-generated by scripts/build_bis_lists.py from https://data.blingtron.app",
+        "-- Do not edit by hand.",
+        "-- lootSpecs is a set of eligible SpecializationIDs; omit the field to allow every spec.",
+        "",
+        "BlingtronApp.LootPools = (function()",
+    ]
+    for specs, var in set_index.items():
+        lines.append(f"    local {var} = {{")
+        lines.extend(f"        [BlingtronApp.{const}] = true," for const in specs)
+        lines.append("    }")
+    lines.extend(["    return {", "        raids = {"])
+    for raid in raids:
+        lines.append(
+            f"            {{ id = {raid['id']}, name = {lua_string(raid['name'])}, encounters = {{"
+        )
+        for encounter in raid["encounters"]:
+            lines.append(
+                f"                {{ id = {encounter['id']}, name = {lua_string(encounter['name'])},"
+            )
+            lines.extend(render_loot_items(encounter.get("items") or [], "                  ", set_index))
+            lines.append("                },")
+        lines.append("            }},")
+    lines.extend(["        },", "        dungeons = {"])
+    for dungeon in dungeons:
+        lines.append(
+            f"            {{ id = {dungeon['id']}, challengeModeId = {dungeon['challengeModeId']}, "
+            f"name = {lua_string(dungeon['name'])},"
+        )
+        lines.extend(render_loot_items(dungeon.get("items") or [], "              ", set_index))
+        lines.append("            },")
+    lines.extend(["        },", "    }", "end)()", ""])
+    return "\n".join(lines)
+
+
 def semantic_version_from_toc(text: str) -> str:
     match = VERSION_LINE_RE.search(text)
     if not match:
@@ -471,9 +740,10 @@ def update_toc(toc_path: Path, lua_filenames: list[str], version: str | None) ->
             raise SystemExit("Failed to update ## Version: in BlingtronApp.toc")
 
     text = re.sub(r"Data\\TSet\.lua\n", "", text)
+    text = re.sub(r"Data\\LootPools\.lua\n", "", text)
 
     file_lines = [f"Data\\BisList\\{name}" for name in lua_filenames]
-    block = "\n".join(file_lines) + "\n"
+    block = "\n".join([*file_lines, LOOT_POOLS_TOC_LINE]) + "\n"
 
     def replace_bislist(_match: re.Match[str]) -> str:
         return block
@@ -514,9 +784,10 @@ def write_outputs(output_dir: Path, tables: Tables) -> list[str]:
 
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="Build Data/BisList Lua files from data.blingtron.app")
+    parser = argparse.ArgumentParser(description="Build BiS lists and loot pools from data.blingtron.app")
     parser.add_argument("--api-base", default=API_BASE)
     parser.add_argument("--output-dir", type=Path, default=root / "Data" / "BisList")
+    parser.add_argument("--loot-output", type=Path, default=root / "Data" / "LootPools.lua")
     parser.add_argument("--toc", type=Path, default=root / "BlingtronApp.toc")
     parser.add_argument("--version", help="Set ## Version in the TOC (e.g. 1.0.1-202608161358)")
     parser.add_argument(
@@ -540,6 +811,14 @@ def main() -> int:
     if not lua_files:
         raise SystemExit("No BiS Lua files were generated")
 
+    raids, dungeons = load_season_sources(args.api_base)
+    if not raids and not dungeons:
+        raise SystemExit("No current-season raids or dungeons found")
+    fetch_loot_pools(args.api_base, raids, dungeons, bis_item_ids(tables))
+    args.loot_output.parent.mkdir(parents=True, exist_ok=True)
+    args.loot_output.write_text(render_loot_lua(raids, dungeons), encoding="utf-8")
+    print(f"Wrote {args.loot_output}")
+
     version = args.version
     if args.stamp_version:
         toc_text = args.toc.read_text(encoding="utf-8")
@@ -548,7 +827,7 @@ def main() -> int:
     if version:
         print(f"Updated {args.toc.name} version to {version}")
     else:
-        print(f"Updated {args.toc.name} BisList file list")
+        print(f"Updated {args.toc.name} data file list")
     return 0
 
 
