@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,12 +27,30 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          BASE=$(awk '/^## Version:/{ print $3; exit }' BlingtronApp.toc | sed -E 's/-[0-9]{12}$//')
-          VERSION="${BASE}-$(date -u +%Y%m%d%H%M)"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG=$(git tag --list --sort=-v:refname | head -n1)
+          fi
+          TAG="${TAG#v}"
+          TAG=$(printf '%s' "$TAG" | sed -E 's/-[0-9]{12}$//')
+          if [ -z "$TAG" ]; then
+            echo "No git tag found; cannot stamp addon version" >&2
+            exit 1
+          fi
+          VERSION="${TAG}-$(date -u +%Y%m%d%H%M)"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using version $VERSION"
 
       - name: Build BiS lists and stamp TOC version
         run: python scripts/build_bis_lists.py --version "${{ steps.version.outputs.VERSION }}"
+
+      - name: Use dated version for packager
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          git tag -l --points-at HEAD | xargs -r git tag -d
+          git tag "$VERSION"
+          echo "HEAD tagged as $VERSION for packager"
 
       - name: Create Package
         uses: BigWigsMods/packager@master
