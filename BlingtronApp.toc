@@ -1,4 +1,4 @@
-## Interface: 121000, 120001, 120000, 110200, 110205, 110207
+## Interface: 120100, 120001, 120000, 110200, 110205, 110207
 ## Title: Blingtron.app
 ## Notes: Set guild officer notes from CSV data and show BiS items in RCLootCouncil
 ## Author: Deltachaos
@@ -13,20 +13,6 @@
 
 Lib\utf8.lua
 Constants.lua
-Data\BisList\blingtron_overall.lua
-Data\BisList\blingtron_raid.lua
-Data\BisList\blingtron_mythic_plus.lua
-Data\BisList\wowhead_overall.lua
-Data\BisList\wowhead_raid.lua
-Data\BisList\wowhead_mythic_plus.lua
-Data\BisList\archon_overall.lua
-Data\BisList\archon_raid.lua
-Data\BisList\archon_mythic_plus.lua
-Data\BisList\icy_veins_overall.lua
-Data\BisList\icy_veins_raid.lua
-Data\BisList\method_overall.lua
-Data\BisList\method_raid.lua
-Data\BisList\method_mythic_plus.lua
 BlingtronApp.lua
 Helpers.lua
 GuildNoteSync.lua
