@@ -309,18 +309,26 @@ def build_jobs(classes: list[dict], api_base: str) -> list[tuple[str, str, str, 
 def fetch_all(jobs: list[tuple[str, str, str, str]]) -> Tables:
     tables: Tables = {}
     done = 0
+    skipped = 0
     total = len(jobs)
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         future_map = {
-            pool.submit(fetch_json, url): (source_id, activity, spec_const)
+            pool.submit(fetch_json, url): (url, source_id, activity, spec_const)
             for url, source_id, activity, spec_const in jobs
         }
         for future in as_completed(future_map):
-            source_id, activity, spec_const = future_map[future]
+            url, source_id, activity, spec_const = future_map[future]
             done += 1
             if done % 50 == 0 or done == total:
                 print(f"Fetched {done}/{total}")
-            payload = future.result()
+            try:
+                payload = future.result()
+            except RuntimeError as exc:
+                if source_id == AGGREGATED_SOURCE:
+                    raise
+                skipped += 1
+                print(f"Skipping unavailable {source_id} payload {url}: {exc}", file=sys.stderr)
+                continue
             if not isinstance(payload, dict):
                 continue
             items = ingest_payload(payload, aggregated=(source_id == AGGREGATED_SOURCE))
@@ -329,6 +337,8 @@ def fetch_all(jobs: list[tuple[str, str, str, str]]) -> Tables:
             spec_map = tables.setdefault((source_id, activity), {}).setdefault(spec_const, {})
             for item_id, entry in items.items():
                 spec_map[item_id] = keep_better(spec_map.get(item_id), entry)
+    if skipped:
+        print(f"Skipped {skipped} unavailable optional source payloads", file=sys.stderr)
     return tables
 
 
