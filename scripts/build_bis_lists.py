@@ -265,10 +265,14 @@ def load_classes(api_base: str) -> list[dict]:
     return payload
 
 
-def build_jobs(classes: list[dict], api_base: str) -> list[tuple[str, str, str, str]]:
-    """Return (url, source_id, activity, spec_const) jobs."""
+def build_jobs(
+    classes: list[dict],
+    api_base: str,
+) -> tuple[list[tuple[str, str, str, str]], dict[str, object | None]]:
+    """Return fetch jobs and aggregate overall payloads fetched for source discovery."""
     base = api_base.rstrip("/")
     jobs: list[tuple[str, str, str, str]] = []
+    prefetched: dict[str, object | None] = {}
     skipped: list[str] = []
     for wow_class in classes:
         class_id = wow_class.get("id")
@@ -283,6 +287,17 @@ def build_jobs(classes: list[dict], api_base: str) -> list[tuple[str, str, str, 
             if not spec_const:
                 skipped.append(f"{class_id}/{spec_id}")
                 continue
+            overall_url = f"{base}/gear/bis/{class_id}/{spec_id}/overall.json"
+            overall_payload = fetch_json(overall_url)
+            if not isinstance(overall_payload, dict):
+                raise RuntimeError(f"Aggregate BiS payload is unavailable: {overall_url}")
+            prefetched[overall_url] = overall_payload
+            raw_sources = overall_payload.get("sources")
+            available_sources = {
+                source_id
+                for source_id in raw_sources
+                if isinstance(source_id, str) and source_id in SOURCE_IDS
+            } if isinstance(raw_sources, list) else set()
             for activity in ACTIVITIES:
                 jobs.append(
                     (
@@ -293,6 +308,8 @@ def build_jobs(classes: list[dict], api_base: str) -> list[tuple[str, str, str, 
                     )
                 )
                 for source_id in SOURCE_IDS:
+                    if source_id not in available_sources:
+                        continue
                     jobs.append(
                         (
                             f"{base}/gear/bis/{class_id}/{spec_id}/source/{source_id}/{activity}.json",
@@ -303,18 +320,41 @@ def build_jobs(classes: list[dict], api_base: str) -> list[tuple[str, str, str, 
                     )
     if skipped:
         print("Skipping unknown specs:", ", ".join(sorted(set(skipped))), file=sys.stderr)
-    return jobs
+    return jobs, prefetched
 
 
-def fetch_all(jobs: list[tuple[str, str, str, str]]) -> Tables:
+def fetch_all(
+    jobs: list[tuple[str, str, str, str]],
+    prefetched: dict[str, object | None] | None = None,
+) -> Tables:
     tables: Tables = {}
     done = 0
-    skipped = 0
+    unavailable_sources: set[str] = set()
     total = len(jobs)
+
+    def merge_payload(payload: object | None, source_id: str, activity: str, spec_const: str) -> None:
+        if not isinstance(payload, dict):
+            return
+        items = ingest_payload(payload, aggregated=(source_id == AGGREGATED_SOURCE))
+        if not items:
+            return
+        spec_map = tables.setdefault((source_id, activity), {}).setdefault(spec_const, {})
+        for item_id, entry in items.items():
+            spec_map[item_id] = keep_better(spec_map.get(item_id), entry)
+
+    prefetched = prefetched or {}
+    pending_jobs = []
+    for url, source_id, activity, spec_const in jobs:
+        if url not in prefetched:
+            pending_jobs.append((url, source_id, activity, spec_const))
+            continue
+        merge_payload(prefetched[url], source_id, activity, spec_const)
+        done += 1
+
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         future_map = {
             pool.submit(fetch_json, url): (url, source_id, activity, spec_const)
-            for url, source_id, activity, spec_const in jobs
+            for url, source_id, activity, spec_const in pending_jobs
         }
         for future in as_completed(future_map):
             url, source_id, activity, spec_const = future_map[future]
@@ -326,19 +366,21 @@ def fetch_all(jobs: list[tuple[str, str, str, str]]) -> Tables:
             except RuntimeError as exc:
                 if source_id == AGGREGATED_SOURCE:
                     raise
-                skipped += 1
-                print(f"Skipping unavailable {source_id} payload {url}: {exc}", file=sys.stderr)
+                if source_id not in unavailable_sources:
+                    print(f"Omitting unavailable source {source_id} after {url} failed: {exc}", file=sys.stderr)
+                unavailable_sources.add(source_id)
                 continue
-            if not isinstance(payload, dict):
-                continue
-            items = ingest_payload(payload, aggregated=(source_id == AGGREGATED_SOURCE))
-            if not items:
-                continue
-            spec_map = tables.setdefault((source_id, activity), {}).setdefault(spec_const, {})
-            for item_id, entry in items.items():
-                spec_map[item_id] = keep_better(spec_map.get(item_id), entry)
-    if skipped:
-        print(f"Skipped {skipped} unavailable optional source payloads", file=sys.stderr)
+            merge_payload(payload, source_id, activity, spec_const)
+    if unavailable_sources:
+        tables = {
+            key: spec_items
+            for key, spec_items in tables.items()
+            if key[0] not in unavailable_sources
+        }
+        print(
+            f"Omitted unavailable sources: {', '.join(sorted(unavailable_sources))}",
+            file=sys.stderr,
+        )
     return tables
 
 
@@ -812,9 +854,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     classes = load_classes(args.api_base)
-    jobs = build_jobs(classes, args.api_base)
+    jobs, prefetched = build_jobs(classes, args.api_base)
     print(f"Fetching {len(jobs)} BiS payloads from {args.api_base}")
-    tables = fetch_all(jobs)
+    tables = fetch_all(jobs, prefetched)
     item_cache = fetch_item_cache(args.api_base, collect_token_ids(tables))
     flatten_item_sources(tables, item_cache)
     lua_files = write_outputs(args.output_dir, tables)

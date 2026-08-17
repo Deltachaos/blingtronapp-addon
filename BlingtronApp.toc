@@ -19,9 +19,6 @@ Data\BisList\blingtron_mythic_plus.lua
 Data\BisList\wowhead_overall.lua
 Data\BisList\wowhead_raid.lua
 Data\BisList\wowhead_mythic_plus.lua
-Data\BisList\archon_overall.lua
-Data\BisList\archon_raid.lua
-Data\BisList\archon_mythic_plus.lua
 Data\BisList\icy_veins_overall.lua
 Data\BisList\icy_veins_raid.lua
 Data\BisList\method_overall.lua
